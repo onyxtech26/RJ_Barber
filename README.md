@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💈 RJ Barber Salon — Booking Management System & WhatsApp Sync Engine
 
-## Getting Started
+An enterprise-tier, luxury-grade web application and booking management system built for **RJ Barber Salon** ("Haircuts & Shaves Since 2022"). Features a real-time 5-step booking concierge, live Meta WhatsApp Cloud API synchronization, and a full-featured Admin Command Hub.
 
-First, run the development server:
+---
 
+## ✨ Features
+
+- **Luxury Brand Aesthetic**: Deep obsidian theme (`#0A0B0D`), antique brass gold accents (`#D4A437`), and official emblem crest.
+- **Interactive Atelier Hallmark**: Custom-engineered mechanical barber pole cylinder with moving stripes, engraved Roman numeral hallmark (`MMXXII`), and live chair radar beacon.
+- **5-Step Booking Concierge**:
+  - Step 01: Service selection with category filters (*Haircuts, Beard & Shave, Packages*).
+  - Step 02: Artisan barber selection (*RJ, Marcus, David* or *Any Available*) with ratings & specialties.
+  - Step 03: Morning & Afternoon scheduling matrix with Sunday closures and buffer intervals.
+  - Step 04: Client contact input with encrypted live WhatsApp concierge opt-in.
+  - Step 05: Luxury appointment pass voucher with monospace reference code (`RJ-XXXXXX`) and Google Calendar export.
+- **Self-Service Appointment Concierge (`/manage`)**: Clients can view passes, reschedule, or cancel via unique tokens or directly through WhatsApp.
+- **Admin Command Hub (`/dashboard`)**:
+  - Live revenue KPIs, appointment counters, and walk-in capacity.
+  - Visual chair timeline schedule (`/calendar`).
+  - Client directory with appointment history and WhatsApp statuses (`/customers`).
+  - Barber roster management and commission rates (`/barbers`).
+  - Service catalog pricing editor (`/manage-services`).
+  - WhatsApp Cloud API configuration and business hours (`/settings`).
+- **Real-Time WhatsApp Integration**: Meta Graph API webhook listener, automated confirmation messages, 2-way bot parser, and 24h/2h reminder scheduling.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router & Turbopack)
+- **Language**: TypeScript & React 19
+- **Database & ORM**: PostgreSQL & Drizzle ORM
+- **UI Components**: Tailwind CSS v4, Base UI, Shadcn, Lucide Icons, Sonner
+- **Caching & Locks**: Upstash Redis (Distributed slot locking)
+- **Messaging**: Meta WhatsApp Business Cloud API
+
+---
+
+## 🚀 Quick Start
+
+### 1. Launch with One-Click Launcher (Windows)
+Double-click `run.bat` in the repository root. It will verify Node.js, install packages if needed, start the dev server, and automatically launch `http://localhost:3000` in your default browser.
+
+### 2. Manual Start
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Navigate to:
+- **Public Storefront**: [http://localhost:3000](http://localhost:3000)
+- **Booking Concierge**: [http://localhost:3000/book](http://localhost:3000/book)
+- **Admin Command Hub**: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🗄️ Database Setup & Seeding
 
-## Learn More
+Copy the example environment file:
+```bash
+cp .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+Fill in your PostgreSQL connection string in `DATABASE_URL`, then run:
+```bash
+# Push schema tables to PostgreSQL
+npm run db:push
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Seed master barbers, services catalog, and weekly shifts
+npm run db:seed
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# (Optional) Open Drizzle Studio to inspect database records
+npm run db:studio
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📱 Meta WhatsApp Cloud API Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Add your Meta developer credentials to `.env.local`:
+```env
+WHATSAPP_ACCESS_TOKEN="your_access_token"
+WHATSAPP_PHONE_NUMBER_ID="your_phone_number_id"
+WHATSAPP_BUSINESS_ACCOUNT_ID="your_business_account_id"
+WHATSAPP_VERIFY_TOKEN="your_webhook_verify_token"
+WHATSAPP_APP_SECRET="your_app_secret"
+```
+
+Configure your webhook in Meta App Dashboard:
+- **Callback URL**: `https://your-domain.com/api/webhook/whatsapp`
+- **Verify Token**: Must match `WHATSAPP_VERIFY_TOKEN`
+- **Fields**: Subscribe to `messages`
+
+---
+
+## 📄 License
+Private repository for RJ Barber Salon. All rights reserved.
