@@ -5,16 +5,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
+  CreditCard,
   LayoutDashboard, 
   CalendarDays, 
   Users, 
   UserCog, 
   Scissors, 
   Settings, 
+  DollarSign,
   Menu,
   LogOut,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Sparkles,
+  Armchair
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
@@ -22,8 +26,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const navItems = [
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'POS Terminal', href: '/pos', icon: CreditCard, highlight: true },
+  { title: 'Chair & Walk-In Queue', href: '/queue', icon: Users },
   { title: 'Live Calendar', href: '/calendar', icon: CalendarDays },
+  { title: 'Till & Cash Drawer', href: '/till', icon: DollarSign },
+  { title: 'Dashboard Overview', href: '/dashboard', icon: LayoutDashboard },
   { title: 'Client Directory', href: '/customers', icon: Users },
   { title: 'Barber Roster', href: '/barbers', icon: UserCog },
   { title: 'Service Menu', href: '/manage-services', icon: Scissors },
@@ -82,12 +89,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <NavLinks />
             <div className="pt-4 border-t border-white/[0.08]">
               <Link
-                href="/"
-                target="_blank"
-                className="flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-primary transition-colors px-3 py-2 rounded-lg"
+                href="/pos"
+                className="flex items-center gap-2 text-xs font-mono text-primary hover:text-primary/80 transition-colors px-3 py-2 rounded-lg font-bold"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>View Public Site</span>
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Open POS Terminal</span>
               </Link>
             </div>
           </SheetContent>
@@ -98,7 +104,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="relative w-7 h-7 rounded-full overflow-hidden border border-primary/40">
               <Image src="/barber_logo.jpeg" alt="RJ Barber" fill className="object-cover" />
             </div>
-            <span className="font-bold text-sm tracking-wider uppercase text-foreground">RJ Admin</span>
+            <span className="font-bold text-sm tracking-wider uppercase text-foreground">RJ POS</span>
           </div>
           
           <div className="hidden lg:flex lg:items-center lg:gap-2">
@@ -114,12 +120,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <div className="flex flex-1 items-center justify-end gap-3">
             <Link
-              href="/"
-              target="_blank"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-primary transition-colors bg-[#14161C] border border-white/[0.06] px-3 py-1.5 rounded-lg"
+              href="/pos"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-black font-bold bg-primary hover:bg-primary/90 transition-all px-3 py-1.5 rounded-lg shadow-sm"
             >
-              <span>Storefront</span>
-              <ExternalLink className="w-3 h-3" />
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>POS Fast Checkout</span>
+            </Link>
+
+            <Link
+              href="/queue"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors bg-[#14161C] border border-white/[0.06] px-3 py-1.5 rounded-lg"
+            >
+              <Users className="w-3.5 h-3.5 text-primary" />
+              <span>Walk-in Bench</span>
             </Link>
 
             {/* User Dropdown */}

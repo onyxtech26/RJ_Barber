@@ -1,6 +1,7 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, DollarSign, Users, Clock, ArrowUpRight } from 'lucide-react';
+import { CalendarDays, DollarSign, Users, Clock, ArrowUpRight, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const metadata = {
@@ -24,9 +25,25 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
           <p className="text-muted-foreground mt-1">Welcome back. Here's what's happening today.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">View Calendar</Button>
-          <Button>New Walk-in</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild className="bg-primary text-black font-bold hover:bg-primary/90">
+            <Link href="/pos">
+              <CreditCard className="h-4 w-4 mr-1.5" />
+              Open POS Terminal
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/queue">
+              <Users className="h-4 w-4 mr-1.5 text-primary" />
+              Walk-in Bench
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/calendar">
+              <CalendarDays className="h-4 w-4 mr-1.5" />
+              View Calendar
+            </Link>
+          </Button>
         </div>
       </div>
 

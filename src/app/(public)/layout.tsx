@@ -38,18 +38,25 @@ export default function PublicLayout({
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-7">
-            <Link href="/" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Home
+          <nav className="hidden md:flex items-center gap-5">
+            <Link href="/pos" className="text-sm font-semibold text-primary transition-colors flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+              <Scissors className="h-4 w-4" />
+              <span>POS Terminal</span>
             </Link>
-            <Link href="/services" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              Services
+            <Link href="/queue" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Queue & Chairs
             </Link>
-            <Link href="/about" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-              About & Craft
+            <Link href="/calendar" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Live Calendar
             </Link>
-            <Button asChild className="ml-2 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 gold-glow">
-              <Link href="/book">Book Your Cut</Link>
+            <Link href="/till" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Till Register
+            </Link>
+            <Link href="/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Dashboard
+            </Link>
+            <Button asChild className="ml-2 font-semibold bg-primary text-black hover:bg-primary/90">
+              <Link href="/book">Client Booking</Link>
             </Button>
           </nav>
 
@@ -60,18 +67,27 @@ export default function PublicLayout({
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle menu</span>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-[#0E1014] border-white/[0.08]">
+                <SheetTitle className="sr-only">Operations Menu</SheetTitle>
                 <nav className="flex flex-col gap-4 mt-8">
-                  <Link href="/" className="text-lg font-medium hover:text-primary transition-colors">
-                    Home
+                  <Link href="/pos" className="text-lg font-bold text-primary hover:text-primary/90 transition-colors">
+                    POS Terminal
                   </Link>
-                  <Link href="/services" className="text-lg font-medium hover:text-primary transition-colors">
-                    Services
+                  <Link href="/queue" className="text-base font-medium text-muted-foreground hover:text-white transition-colors">
+                    Queue & Chairs
                   </Link>
-                  <div className="mt-4 border-t border-border pt-4">
-                    <Button asChild className="w-full">
-                      <Link href="/book">Book Now</Link>
+                  <Link href="/calendar" className="text-base font-medium text-muted-foreground hover:text-white transition-colors">
+                    Live Calendar
+                  </Link>
+                  <Link href="/till" className="text-base font-medium text-muted-foreground hover:text-white transition-colors">
+                    Till Register
+                  </Link>
+                  <Link href="/dashboard" className="text-base font-medium text-muted-foreground hover:text-white transition-colors">
+                    Operations Dashboard
+                  </Link>
+                  <div className="mt-4 border-t border-white/[0.08] pt-4">
+                    <Button asChild className="w-full bg-primary text-black font-bold">
+                      <Link href="/book">Client Booking Form</Link>
                     </Button>
                   </div>
                 </nav>

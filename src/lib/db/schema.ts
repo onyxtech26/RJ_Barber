@@ -3,6 +3,10 @@ import { relations, sql } from 'drizzle-orm';
 
 export const appointmentStatusEnum = pgEnum('appointment_status', ['pending', 'confirmed', 'client_confirmed', 'in_chair', 'completed', 'cancelled', 'no_show']);
 export const bookingSourceEnum = pgEnum('booking_source', ['online', 'walk_in', 'phone', 'whatsapp']);
+export const orderStatusEnum = pgEnum('order_status', ['pending', 'completed', 'voided', 'refunded']);
+export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'card', 'qr_code', 'split']);
+export const registerSessionStatusEnum = pgEnum('register_session_status', ['open', 'closed']);
+export const queueStatusEnum = pgEnum('queue_status', ['waiting', 'called', 'in_chair', 'completed', 'cancelled']);
 
 export const shops = pgTable('shops', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -94,6 +98,73 @@ export const appointments = pgTable('appointments', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const registerSessions = pgTable('register_sessions', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  shopId: uuid('shop_id').references(() => shops.id),
+  openedBy: text('opened_by').notNull().default('Cashier'),
+  openingFloatCents: integer('opening_float_cents').notNull().default(20000), // default $200.00
+  closingCashCents: integer('closing_cash_cents'),
+  expectedCashCents: integer('expected_cash_cents'),
+  cashDifferenceCents: integer('cash_difference_cents'),
+  status: registerSessionStatusEnum('status').default('open'),
+  notes: text('notes'),
+  openedAt: timestamp('opened_at').defaultNow(),
+  closedAt: timestamp('closed_at'),
+});
+
+export const orders = pgTable('orders', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  shopId: uuid('shop_id').references(() => shops.id),
+  registerSessionId: uuid('register_session_id').references(() => registerSessions.id),
+  appointmentId: uuid('appointment_id').references(() => appointments.id),
+  customerId: uuid('customer_id').references(() => customers.id),
+  customerName: text('customer_name').notNull().default('Walk-in Client'),
+  customerPhone: text('customer_phone'),
+  barberId: uuid('barber_id').references(() => barbers.id),
+  status: orderStatusEnum('status').default('completed'),
+  subtotalCents: integer('subtotal_cents').notNull(),
+  discountCents: integer('discount_cents').default(0),
+  tipCents: integer('tip_cents').default(0),
+  taxCents: integer('tax_cents').default(0),
+  totalCents: integer('total_cents').notNull(),
+  paymentMethod: paymentMethodEnum('payment_method').default('cash'),
+  amountTenderedCents: integer('amount_tendered_cents'),
+  changeDueCents: integer('change_due_cents').default(0),
+  paymentDetails: jsonb('payment_details'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  completedAt: timestamp('completed_at').defaultNow(),
+});
+
+export const orderItems = pgTable('order_items', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  orderId: uuid('order_id').references(() => orders.id),
+  serviceId: uuid('service_id').references(() => services.id),
+  barberId: uuid('barber_id').references(() => barbers.id),
+  itemName: text('item_name').notNull(),
+  itemType: text('item_type').default('service'), // 'service' | 'product' | 'custom'
+  unitPriceCents: integer('unit_price_cents').notNull(),
+  quantity: integer('quantity').default(1),
+  totalPriceCents: integer('total_price_cents').notNull(),
+  commissionCents: integer('commission_cents').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const queueEntries = pgTable('queue_entries', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  shopId: uuid('shop_id').references(() => shops.id),
+  customerName: text('customer_name').notNull(),
+  customerPhone: text('customer_phone'),
+  serviceId: uuid('service_id').references(() => services.id),
+  preferredBarberId: uuid('preferred_barber_id').references(() => barbers.id),
+  status: queueStatusEnum('status').default('waiting'),
+  estimatedWaitMinutes: integer('estimated_wait_minutes').default(15),
+  notes: text('notes'),
+  joinedAt: timestamp('joined_at').defaultNow(),
+  seatedAt: timestamp('seated_at'),
+  completedAt: timestamp('completed_at'),
+});
+
 // Relations
 export const shopsRelations = relations(shops, ({ many }) => ({
   barbers: many(barbers),
@@ -169,6 +240,68 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   }),
 }));
 
+export const registerSessionsRelations = relations(registerSessions, ({ one, many }) => ({
+  shop: one(shops, {
+    fields: [registerSessions.shopId],
+    references: [shops.id],
+  }),
+  orders: many(orders),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  shop: one(shops, {
+    fields: [orders.shopId],
+    references: [shops.id],
+  }),
+  session: one(registerSessions, {
+    fields: [orders.registerSessionId],
+    references: [registerSessions.id],
+  }),
+  barber: one(barbers, {
+    fields: [orders.barberId],
+    references: [barbers.id],
+  }),
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id],
+  }),
+  appointment: one(appointments, {
+    fields: [orders.appointmentId],
+    references: [appointments.id],
+  }),
+  items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  service: one(services, {
+    fields: [orderItems.serviceId],
+    references: [services.id],
+  }),
+  barber: one(barbers, {
+    fields: [orderItems.barberId],
+    references: [barbers.id],
+  }),
+}));
+
+export const queueEntriesRelations = relations(queueEntries, ({ one }) => ({
+  shop: one(shops, {
+    fields: [queueEntries.shopId],
+    references: [shops.id],
+  }),
+  service: one(services, {
+    fields: [queueEntries.serviceId],
+    references: [services.id],
+  }),
+  preferredBarber: one(barbers, {
+    fields: [queueEntries.preferredBarberId],
+    references: [barbers.id],
+  }),
+}));
+
 export type Shop = typeof shops.$inferSelect;
 export type NewShop = typeof shops.$inferInsert;
 
@@ -192,3 +325,15 @@ export type NewCustomer = typeof customers.$inferInsert;
 
 export type Appointment = typeof appointments.$inferSelect;
 export type NewAppointment = typeof appointments.$inferInsert;
+
+export type RegisterSession = typeof registerSessions.$inferSelect;
+export type NewRegisterSession = typeof registerSessions.$inferInsert;
+
+export type Order = typeof orders.$inferSelect;
+export type NewOrder = typeof orders.$inferInsert;
+
+export type OrderItem = typeof orderItems.$inferSelect;
+export type NewOrderItem = typeof orderItems.$inferInsert;
+
+export type QueueEntry = typeof queueEntries.$inferSelect;
+export type NewQueueEntry = typeof queueEntries.$inferInsert;

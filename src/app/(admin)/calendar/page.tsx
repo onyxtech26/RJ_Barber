@@ -1,6 +1,8 @@
 'use client';
+
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, Users } from 'lucide-react';
 
 const MOCK_BARBERS = ['James "RJ"', 'Mike J.', 'David L.'];
 const TIME_SLOTS = [
@@ -29,13 +31,27 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6 p-6 h-[calc(100vh-2rem)] flex flex-col">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight text-[#D4A437]">Appointment Calendar</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-neutral-800 text-neutral-300 hover:bg-neutral-900">Today</Button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-[#D4A437]">Appointment Calendar</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Multi-barber daily timeline grid with live chair dispatch</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild className="bg-primary text-black font-bold hover:bg-primary/90 h-9 text-xs">
+            <Link href="/pos">
+              <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+              Open POS Register
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="border-neutral-800 text-neutral-300 hover:bg-neutral-900 h-9 text-xs">
+            <Link href="/queue">
+              <Users className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              Walk-in Bench
+            </Link>
+          </Button>
           <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-800 rounded-md">
             <Button variant="ghost" size="icon" className="h-9 w-9 text-neutral-400 hover:text-white"><ChevronLeft className="h-4 w-4" /></Button>
-            <span className="text-sm font-medium px-2">Oct 24, 2023</span>
+            <span className="text-sm font-medium px-2">Today</span>
             <Button variant="ghost" size="icon" className="h-9 w-9 text-neutral-400 hover:text-white"><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </div>

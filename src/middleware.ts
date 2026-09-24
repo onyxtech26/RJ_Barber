@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { createServerClient } from '@supabase/ssr';
 
-const adminPaths = ['/dashboard', '/calendar', '/customers', '/barbers', '/manage-services', '/settings'];
+const adminPaths = ['/dashboard', '/calendar', '/customers', '/barbers', '/manage-services', '/settings', '/pos', '/queue', '/till'];
 
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
