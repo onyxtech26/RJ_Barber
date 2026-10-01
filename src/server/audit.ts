@@ -12,6 +12,7 @@ export type AuditAction =
   | 'order.paid'
   | 'order.cancelled'
   | 'order.method_changed'
+  | 'order.voided'
   | 'discount.approved';
 
 /** Append-only record of who did what. Pass a transaction to log atomically with the change. */

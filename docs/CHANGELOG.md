@@ -6,6 +6,17 @@ Format each entry: what was done, why it mattered, and any key decisions.
 ---
 
 ## 2026-10-01
+### Phase 5 — Orders page and voids
+- **Orders list** (`/orders`): day picker with previous/next/today, status chips (paid, awaiting payment, voided, cancelled), method chips (DuitNow, cash), and search by receipt number, customer name or phone. Each row shows time, customer, receipt no., items, barbers, status and total.
+- **Day summary cards:** takings (paid only), DuitNow total, cash total, and "not counted" (pending + voided, with counts incl. cancelled).
+- **Sale detail** (`/orders/[id]`): lines with barber, discount with who approved it, SST, cash received/change, DuitNow reference, and a history timeline (charged → confirmed / cancelled / voided with reason). Commission per line is shown to owners only.
+- **Owner void** (`voidOrder` Server Action): paid sales only, reason required (min 3 chars), conditional update so it can't race, blocked once the sale's day is closed, logged as `order.voided`. Voided sales drop out of takings but stay on record. Staff see "ask the owner" instead of the button.
+- **Decision — filters in the URL:** the server reads `?date=&status=&method=&q=`, so refresh/back/bookmarks keep the view and only matching rows are sent. Untrusted params are validated (bad values fall back to defaults).
+- **Decision — search ignores the date:** looking up an old receipt is the main reason to search; results cover all dates (capped at 100, with a note).
+- **Bug avoided — LIKE wildcards:** a search for `%` or `_` would have matched everything. Search terms are escaped and the query uses an explicit `ESCAPE` clause (SQLite has no default escape character). Also caught that a `''` inside a TS template literal becomes `'` at runtime — the escape character is now a bound parameter.
+- Shared date helpers in `src/lib/format.ts` (shop-time formatting, business-date arithmetic).
+- **Verified in the browser:** summary totals, every filter via URL (incl. `%`, `_`, case-insensitive search, invalid params), chip/search controls update the URL, staff detail view (no void, no commission), owner detail view, void with too-short reason blocked, void updates the page and the day's totals (RM 112 → RM 82), audit entry, closed-day guard (temporarily attached a fake day close, then reverted), 404 for unknown sales, no overflow at 375px.
+
 ### Phase 4 — POS terminal
 - **Terminal** (`src/features/pos/`): barber selector (defaults to the signed-in barber), searchable catalog grid with category chips, ticket with quantity +/−, barber per line (services must have one), optional customer name, discount (percent or RM, reason required, quick reasons), live subtotal/discount/SST/total, and two charge buttons: **DuitNow** and **Cash**.
 - **Payment screen:** DuitNow shows the amount and the shop QR (placeholder until uploaded in Settings) with an optional reference; Cash takes amount received with quick-note buttons and shows change (blocks if not enough). Both have *Switch method*, *Cancel sale* (two-step) and *Leave pending*.
