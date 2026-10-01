@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-Phases 0–6 done: terminal, orders, Day Close (report, close/reopen, backup on close) and owner Settings (shop + SST + discount limit + DuitNow QR upload, services & products, staff & PINs). All core features exist. Next: Phase 7 — receipt printing (80mm), tablet QA, production run setup, README.
+**All 7 phases of the POS redesign are done.** The app runs in production mode from `run.bat` on the shop PC. Next: go-live checklist below (real data from the client, test on the real receipt printer, off-PC backups).
 
 ---
 
@@ -17,6 +17,7 @@ Phases 0–6 done: terminal, orders, Day Close (report, close/reopen, backup on 
 - [x] Set up cross-session project tracking (this system)
 - [x] Phase 0 — tagged old system `pre-pos-redesign`, read Next 16 docs (middleware → `proxy.ts`)
 - [x] Phase 1 — removed booking/WhatsApp/queue/till/Supabase/Redis; light theme from logo; POS shell + placeholder routes
+- [x] Phase 7 — 80mm receipt print view + A4 day report (`/print/...`, printed via hidden iframe, Print buttons on receipt dialog / sale detail / Day Close); session cookie `secure` only over real HTTPS; production `run.bat` (build only when source changed via `scripts/needs-build.mjs`, `next start` bound to 127.0.0.1, opens Edge app window); `.gitattributes` keeps `.bat` CRLF; README rewritten for owner/staff/maintainer
 - [x] Phase 6 — Day Close (DuitNow vs cash, discounts/SST, per-barber net sales + commission, products sold; blocked while sales are pending; freezes snapshot, links orders, blocks new sales and voids for that date, backup on close; owner reopen with reason; unclosed-days reminder) + Settings (shop details, SST with reg no., discount approval limit, DuitNow account name + QR upload served at `/duitnow-qr`; catalog editor with hide-not-delete; staff add/edit/deactivate, last-owner guard, PIN reset that clears lockout and revokes sessions)
 - [x] Phase 5 — Orders: URL-based filters (date, status, method, search), day summary (takings / DuitNow / cash / not counted), sale detail with history timeline, owner-only commission view, owner void (paid only, reason required, blocked once the day is closed), audit `order.voided`
 - [x] Phase 4 — POS terminal: catalog grid + search, ticket with barber per line, discounts (owner PIN above threshold, shared lockout), server-side pricing/commission/SST, receipt numbers, DuitNow/cash payment screen with change calculator, pending tray, cancel, switch method, receipt dialog; pricing unit tests (`npm test`)
@@ -27,7 +28,10 @@ Phases 0–6 done: terminal, orders, Day Close (report, close/reopen, backup on 
 - (nothing active)
 
 ### ⏭️ Next / To do
-- [ ] Phase 7 — receipt reprint button on the order detail page + 80mm print layout; printable Day Close report; production run (`next build` + `next start` in run.bat instead of `next dev`); decide on cookie `secure` for LAN access; README rewrite, tablet QA, tests for pricing/state rules, README
+- [ ] Go-live: get the client's real staff names, services and prices, and DuitNow QR (they can enter them in Settings)
+- [ ] Go-live: test-print on the actual 80mm printer (margins none, headers off); decide on `--kiosk-printing`
+- [ ] Go-live: install on the shop PC from a clean copy (no `data/`), set real PINs, delete `data/initial-pins.txt`
+- [ ] Go-live: agree how `data/` gets copied off the PC (USB / cloud folder) — backups on the same disk don't survive a disk failure
 
 ### 💤 Backlog / ideas
 - Move from SQLite to hosted Postgres if the client wants cloud access later
@@ -53,6 +57,8 @@ Phases 0–6 done: terminal, orders, Day Close (report, close/reopen, backup on 
 - **Uploads:** `data/uploads/` (never `public/`), type checked by magic bytes, max 4 MB (`experimental.serverActions.bodySizeLimit = 5mb`).
 - **Migration gotcha:** drizzle-kit's SQLite table-rebuild migrations can SELECT a brand-new column from the old table (happened in `0003`) — always read generated SQL before applying.
 - **Enums** live in `src/lib/enums.ts` (client-safe); `schema.ts` re-exports them.
+- **Production run:** `run.bat` → `db:setup` → `db:backup` → build if `scripts/needs-build.mjs` says source is newer than `.next/BUILD_ID` → `next start -H 127.0.0.1 -p 3000` → Edge `--app` window. Not exposed on the LAN by default (README "Using a tablet" explains how to change it). Session cookie is `secure` only when `x-forwarded-proto` is https.
+- **Printing:** `/print/receipt/[id]` (80mm, `@page size: 80mm auto`) and `/print/day/[date]` (A4, owner only). `src/lib/print.ts` loads them in a hidden iframe and checks for a `data-print-ready` marker before calling `print()`, so error/login pages are never printed.
 - **Testing tip:** the browser tool's `type` action doesn't fire `keydown`, so the PIN pad ignores it — use `key` presses or click the on-screen keypad.
 
 ---
@@ -64,3 +70,4 @@ Phases 0–6 done: terminal, orders, Day Close (report, close/reopen, backup on 
 - **2026-10-01** — Phase 4: POS terminal — ticket, discounts with owner approval, DuitNow/cash payment, pending tray, receipts.
 - **2026-10-01** — Phase 5: Orders page — filters, search, day summary, sale detail, owner void.
 - **2026-10-01** — Phase 6: Day Close + owner Settings (shop/SST/QR, catalog, staff/PINs).
+- **2026-10-01** — Phase 7: receipt + day-report printing, production run.bat, cookie/LAN hardening, README. Redesign plan complete.

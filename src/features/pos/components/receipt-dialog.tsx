@@ -2,6 +2,7 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PrintButton } from '@/components/print-button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PAYMENT_METHOD_LABELS } from '@/lib/enums';
 import { formatRM } from '@/lib/money';
@@ -13,7 +14,7 @@ const timeFormatter = new Intl.DateTimeFormat('en-MY', {
   timeStyle: 'short',
 });
 
-/** Shown right after payment is confirmed. Printing comes with the 80mm receipt layout (Phase 7). */
+/** Shown right after payment is confirmed, with a one-tap print of the 80mm receipt. */
 export function ReceiptDialog({ receipt, onDone }: { receipt: OrderReceipt | null; onDone: () => void }) {
   return (
     <Dialog open={receipt !== null} onOpenChange={(open) => !open && onDone()}>
@@ -74,9 +75,12 @@ export function ReceiptDialog({ receipt, onDone }: { receipt: OrderReceipt | nul
               Confirmed by {receipt.confirmedByName}
             </p>
 
-            <Button variant="brand" size="xl" className="h-14 text-lg" onClick={onDone} autoFocus>
-              New sale
-            </Button>
+            <div className="grid grid-cols-[auto_1fr] gap-2">
+              <PrintButton url={`/print/receipt/${receipt.id}`} label="Print" className="h-14 px-5" />
+              <Button variant="brand" size="xl" className="h-14 text-lg" onClick={onDone} autoFocus>
+                New sale
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

@@ -1,56 +1,70 @@
 @echo off
-title RJ Barber Salon - POS
+title RJ Barber POS
 color 0E
+cd /d "%~dp0"
 
 echo ===================================================
 echo              RJ BARBER SALON - POS
 echo ===================================================
 echo.
 
-:: Navigate to this directory
-cd /d "%~dp0"
+:: The POS is only reachable from this PC (127.0.0.1). To use it from a tablet on the shop
+:: Wi-Fi, see "Using a tablet" in README.md.
+set POS_URL=http://127.0.0.1:3000/
 
-:: Check if Node is installed
 where node >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     color 0C
-    echo [ERROR] Node.js is not installed or not in PATH!
-    echo Please install Node.js from https://nodejs.org/
-    echo.
+    echo [ERROR] Node.js is not installed. Install the LTS version from https://nodejs.org/
     pause
     exit /b 1
 )
 
-:: Check if node_modules exists, install if missing
+:: Already running? Just open the window.
+curl -s -o nul %POS_URL%login >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] The POS is already running.
+    goto open
+)
+
 if not exist "node_modules\" (
-    echo [INFO] Dependencies not found. Installing packages...
+    echo [INFO] First run: installing packages...
     call npm install
-    if %ERRORLEVEL% NEQ 0 (
-        color 0C
-        echo [ERROR] npm install failed!
-        pause
-        exit /b 1
-    )
+    if %ERRORLEVEL% NEQ 0 goto failed
 )
 
 echo [INFO] Preparing database...
 call npm run db:setup
-if %ERRORLEVEL% NEQ 0 (
-    color 0C
-    echo [ERROR] Database setup failed!
-    pause
-    exit /b 1
-)
+if %ERRORLEVEL% NEQ 0 goto failed
 call npm run db:backup
 
-echo [INFO] Starting Next.js development server...
-echo [INFO] App will be available at: http://localhost:3000
+node scripts\needs-build.mjs
+if %ERRORLEVEL% NEQ 0 (
+    echo [INFO] Building the app ^(only needed after an update^)...
+    call npm run build
+    if %ERRORLEVEL% NEQ 0 goto failed
+)
+
+:: Open the window once the server answers (in the background, so this window keeps the server).
+start "" /min powershell -NoProfile -WindowStyle Hidden -Command ^
+  "for ($i = 0; $i -lt 60; $i++) { try { Invoke-WebRequest -UseBasicParsing '%POS_URL%login' -TimeoutSec 2 | Out-Null; break } catch { Start-Sleep -Seconds 1 } };" ^
+  "try { Start-Process msedge -ArgumentList '--app=%POS_URL%' -ErrorAction Stop } catch { Start-Process '%POS_URL%' }"
+
 echo.
+echo [INFO] POS running at %POS_URL%  -  keep this window open. Close it to stop the POS.
+echo.
+call npm run start
+goto end
 
-:: Wait 3 seconds and automatically open browser
-start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:3000"
+:open
+powershell -NoProfile -Command "try { Start-Process msedge -ArgumentList '--app=%POS_URL%' -ErrorAction Stop } catch { Start-Process '%POS_URL%' }"
+goto end
 
-:: Start Next.js dev server
-call npm run dev
-
+:failed
+color 0C
+echo.
+echo [ERROR] Something went wrong above. Take a photo of this window and send it to support.
 pause
+exit /b 1
+
+:end

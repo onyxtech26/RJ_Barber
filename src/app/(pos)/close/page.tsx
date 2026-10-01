@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AlertTriangle, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PrintButton } from '@/components/print-button';
 import { CloseDayButton, ReopenDayButton } from '@/features/close/components/close-day-actions';
 import { getCloseOverview, parseCloseDate } from '@/features/close/queries';
 import type { DayReport } from '@/features/close/report';
@@ -50,17 +51,20 @@ export default async function DayClosePage({
             )}
           </div>
         </div>
-        {close ? (
-          <ReopenDayButton businessDate={businessDate} dayLabel={dayLabel} />
-        ) : (
-          <CloseDayButton
-            businessDate={businessDate}
-            dayLabel={dayLabel}
-            duitnowSen={report.duitnow.totalSen}
-            cashSen={report.cash.totalSen}
-            disabledReason={disabledReason}
-          />
-        )}
+        <div className="flex flex-wrap items-start gap-2">
+          <PrintButton url={`/print/day/${businessDate}`} label="Print report" />
+          {close ? (
+            <ReopenDayButton businessDate={businessDate} dayLabel={dayLabel} />
+          ) : (
+            <CloseDayButton
+              businessDate={businessDate}
+              dayLabel={dayLabel}
+              duitnowSen={report.duitnow.totalSen}
+              cashSen={report.cash.totalSen}
+              disabledReason={disabledReason}
+            />
+          )}
+        </div>
       </div>
 
       {unclosedDays.length > 0 && (

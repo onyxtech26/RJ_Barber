@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Banknote, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PrintButton } from '@/components/print-button';
 import { StatusBadge } from '@/features/orders/components/status-badge';
 import { VoidOrderButton } from '@/features/orders/components/void-order-button';
 import { getOrderDetail, type OrderDetail } from '@/features/orders/queries';
@@ -37,7 +38,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             {order.customerPhone && ` · ${order.customerPhone}`}
           </p>
         </div>
-        <p className="text-3xl font-bold tracking-tight tabular-nums">{formatRM(order.totalSen)}</p>
+        <div className="flex items-center gap-3">
+          <PrintButton url={`/print/receipt/${order.id}`} label="Print receipt" />
+          <p className="text-3xl font-bold tracking-tight tabular-nums">{formatRM(order.totalSen)}</p>
+        </div>
       </div>
 
       <OrderActions order={order} />

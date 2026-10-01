@@ -1,7 +1,7 @@
 import 'server-only';
 import { createHash, randomBytes } from 'node:crypto';
 import { cache } from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { and, eq, gt, lt } from 'drizzle-orm';
 import { db, sessions, staff, type StaffRole } from '@/server/db';
@@ -29,11 +29,14 @@ export async function createSession(staffId: string) {
   await db.delete(sessions).where(lt(sessions.expiresAt, now));
   await db.insert(sessions).values({ id: hashToken(token), staffId, expiresAt, lastSeenAt: now });
 
+  // Secure only when the browser really connected over HTTPS. Next sets x-forwarded-proto from the
+  // actual connection, so plain http on the shop PC (or a tablet on the LAN) still gets a working cookie.
+  const isHttps = (await headers()).get('x-forwarded-proto')?.split(',')[0].trim() === 'https';
+
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true, // page scripts can't read it
     sameSite: 'lax',
-    // Browsers treat http://localhost as secure, so this works on the shop PC in production.
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     path: '/',
     expires: expiresAt,
   });
