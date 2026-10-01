@@ -1,9 +1,9 @@
 @echo off
-title RJ Barber Salon - Booking System
+title RJ Barber Salon - POS
 color 0E
 
 echo ===================================================
-echo        RJ BARBER SALON - BOOKING SYSTEM
+echo              RJ BARBER SALON - POS
 echo ===================================================
 echo.
 

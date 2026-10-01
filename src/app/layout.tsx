@@ -1,7 +1,6 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { QueryProvider } from '@/components/providers/query-provider';
 import { Toaster } from '@/components/ui/sonner';
 
 const geistSans = Geist({
@@ -15,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'RJ Barber Salon | Premium Haircuts & Grooming',
-  description: 'Premium grooming experience for gentlemen. Book your haircut, beard trim, or hot towel shave online.',
+  title: 'RJ Barber POS',
+  description: 'Point of sale terminal for RJ Barber Salon.',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#fafaf7',
+  colorScheme: 'light',
 };
 
 export default function RootLayout({
@@ -25,14 +29,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en-MY">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-dvh bg-background font-sans text-foreground antialiased`}
       >
-        <QueryProvider>
-          {children}
-          <Toaster position="bottom-right" />
-        </QueryProvider>
+        {children}
+        <Toaster position="top-center" />
       </body>
     </html>
   );
