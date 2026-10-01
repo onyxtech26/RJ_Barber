@@ -1,6 +1,7 @@
 import 'server-only';
 import { connection } from 'next/server';
 import { db } from '@/server/db';
+import { requireStaff } from '@/server/auth/session';
 
 export type CatalogCategory = Awaited<ReturnType<typeof getActiveCatalog>>[number];
 
@@ -8,6 +9,7 @@ export type CatalogCategory = Awaited<ReturnType<typeof getActiveCatalog>>[numbe
 export async function getActiveCatalog() {
   // Without this, Next would prerender the page at build time and freeze the prices.
   await connection();
+  await requireStaff();
 
   const result = await db.query.categories.findMany({
     where: (c, { eq }) => eq(c.isActive, true),

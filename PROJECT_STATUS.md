@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-Phases 0–2 done: POS-only shell with light theme, and a real SQLite database (schema, migrations, seed, daily backup). The Terminal shows the live catalog read-only. Next: Phase 3 — staff PIN login and sessions.
+Phases 0–3 done: light POS shell, SQLite data layer, and staff PIN login with DB sessions, owner/staff roles and lockout. The Terminal shows the live catalog read-only. Next: Phase 4 — the POS terminal itself (ticket, charge, DuitNow/cash, pending tray, confirm, receipt).
 
 ---
 
@@ -17,13 +17,13 @@ Phases 0–2 done: POS-only shell with light theme, and a real SQLite database (
 - [x] Set up cross-session project tracking (this system)
 - [x] Phase 0 — tagged old system `pre-pos-redesign`, read Next 16 docs (middleware → `proxy.ts`)
 - [x] Phase 1 — removed booking/WhatsApp/queue/till/Supabase/Redis; light theme from logo; POS shell + placeholder routes
+- [x] Phase 3 — Staff PIN auth: DB-backed sessions (hashed token in httpOnly cookie, 12h), `proxy.ts` cookie-presence redirect, `requireStaff()`/`requireOwner()` DAL checks in pages/queries, owner-only nav, 5-try / 5-min lockout, audit log for login/logout/failures
 - [x] Phase 2 — Drizzle on SQLite via `@libsql/client`: schema + CHECK constraints, migrations, seed (RM catalog, placeholder staff, generated PINs), daily backup, `run.bat` prepares DB on launch
 
 ### 🔄 In progress
 - (nothing active)
 
 ### ⏭️ Next / To do
-- [ ] Phase 3 — Auth: staff PIN pad, hashed PINs, signed httpOnly session cookie, `proxy.ts` optimistic redirect + server-side guards, owner/staff roles, lockout
 - [ ] Phase 4 — POS terminal: catalog, ticket (barber per line), discount, Charge → DuitNow QR screen / cash change calc → Pending tray → confirm → receipt
 - [ ] Phase 5 — Orders: history, search, reprint, owner void with reason
 - [ ] Phase 6 — Day close (DuitNow vs cash totals, per-barber sales + commission, lock day) + owner settings
@@ -45,9 +45,12 @@ Phases 0–2 done: POS-only shell with light theme, and a real SQLite database (
 - **Seed data is placeholder:** staff names (RJ / Barber 1 / Barber 2) and catalog prices are guesses — confirm real ones with the client. Initial PINs are in `data/initial-pins.txt` (gitignored).
 - **Theme:** light only. Tokens in `src/app/globals.css`: `--primary` = black ink, `--brand` = logo yellow `#F5C400` used only as a fill with black text (Charge button, active nav).
 - **Next 16:** `middleware.ts` is renamed `proxy.ts`; use it only for optimistic redirects — real auth checks live in server code.
+- **Auth rules:** every page, query and Server Action calls `requireStaff()` or `requireOwner()` (`src/server/auth/session.ts`) — never rely on the layout or proxy alone. Owner-only: Day Close, Settings, voids. Changing a PIN or deactivating staff must call `revokeAllSessions(staffId)`. Session cookie `rj_session` is `secure` only in production (Chrome treats http://localhost as secure; accessing via LAN IP over http in production would drop it).
+- **Testing tip:** the browser tool's `type` action doesn't fire `keydown`, so the PIN pad ignores it — use `key` presses or click the on-screen keypad.
 
 ---
 
 ## 📝 Session log
 - **2026-10-01** — Set up project tracking; planned POS-only redesign; completed Phase 0 (tag, docs) and Phase 1 (strip-down, light theme, shell).
 - **2026-10-01** — Phase 2: SQLite data layer, migrations, seed, backups; Terminal reads live catalog.
+- **2026-10-01** — Phase 3: staff PIN login, DB sessions, roles, lockout, audit log.

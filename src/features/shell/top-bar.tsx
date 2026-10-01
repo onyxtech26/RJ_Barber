@@ -2,19 +2,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarCheck, ReceiptText, Settings, ShoppingCart } from 'lucide-react';
+import { CalendarCheck, LogOut, ReceiptText, Settings, ShoppingCart } from 'lucide-react';
 import { BrandLogo } from '@/components/brand-logo';
+import { Button } from '@/components/ui/button';
+import { signOut } from '@/features/auth/actions';
+import type { CurrentStaff } from '@/server/auth/session';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Terminal', icon: ShoppingCart },
-  { href: '/orders', label: 'Orders', icon: ReceiptText },
-  { href: '/close', label: 'Day Close', icon: CalendarCheck },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/', label: 'Terminal', icon: ShoppingCart, ownerOnly: false },
+  { href: '/orders', label: 'Orders', icon: ReceiptText, ownerOnly: false },
+  { href: '/close', label: 'Day Close', icon: CalendarCheck, ownerOnly: true },
+  { href: '/settings', label: 'Settings', icon: Settings, ownerOnly: true },
 ];
 
-export function TopBar() {
+export function TopBar({ currentStaff }: { currentStaff: CurrentStaff }) {
   const pathname = usePathname();
+  const isOwner = currentStaff.role === 'owner';
 
   return (
     <header className="sticky top-0 z-30 border-b bg-card">
@@ -28,7 +32,7 @@ export function TopBar() {
         </Link>
 
         <nav className="flex flex-1 items-center justify-center gap-1 overflow-x-auto">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.filter((item) => isOwner || !item.ownerOnly).map(({ href, label, icon: Icon }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
             return (
               <Link
@@ -48,9 +52,17 @@ export function TopBar() {
           })}
         </nav>
 
-        {/* Signed-in staff member + sign out arrive with PIN auth (Phase 3). */}
-        <div className="hidden shrink-0 text-right text-xs text-muted-foreground lg:block">
-          Not signed in
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="hidden text-right leading-tight lg:block">
+            <p className="text-sm font-medium">{currentStaff.name}</p>
+            <p className="text-xs text-muted-foreground capitalize">{currentStaff.role}</p>
+          </div>
+          <form action={signOut}>
+            <Button type="submit" variant="outline" size="lg" className="h-11">
+              <LogOut />
+              <span className="hidden sm:inline">Switch</span>
+            </Button>
+          </form>
         </div>
       </div>
     </header>

@@ -6,6 +6,15 @@ Format each entry: what was done, why it mattered, and any key decisions.
 ---
 
 ## 2026-10-01
+### Phase 3 — Staff PIN login, sessions and roles
+- **Login screen:** pick your name, enter a 4–6 digit PIN on a touch keypad (physical keyboard works too: digits, Backspace, Enter, Esc). Errors show tries left.
+- **Sessions in the database** (`sessions` table, migration `0001`): a random 32-byte token goes in an httpOnly, SameSite=Lax cookie; only its SHA-256 hash is stored, so a copied DB file can't be used to sign in. 12-hour lifetime; `last_seen_at` refreshed at most every 5 min; expired rows cleaned up on each login.
+- **Where checks happen (per the Next 16 auth guide):** `src/proxy.ts` only redirects when there's no cookie at all (fast, optimistic). The real check is `requireStaff()` / `requireOwner()` in `src/server/auth/session.ts`, called by every page and data function and cached per request with React `cache()`. Not relying on the layout, because layouts don't re-run on client navigation.
+- **Roles:** owners get Day Close and Settings; staff are redirected to the Terminal if they open those URLs, and the links are hidden for them. "Switch" button signs out for the next person.
+- **Lockout:** 5 wrong PINs lock that staff member for 5 minutes (counter incremented atomically in SQL). Login, logout, failed PINs and lockouts are written to `audit_log`.
+- **Decision — database sessions over signed JWT cookies:** lets us revoke instantly (sign out, deactivate staff, PIN change) and needs no secret key to manage; on local SQLite the extra lookup costs microseconds.
+- **Verified in the browser:** no-cookie redirect, wrong PIN message, staff login + hidden owner links, staff blocked from `/settings` and `/close`, `/login` redirects when signed in, Switch deletes the session row, revoking sessions in the DB signs the browser out on the next request (no redirect loop), lockout on the 5th wrong PIN and correct PIN refused while locked, audit trail complete.
+
 ### Phase 2 — SQLite data layer
 - **Schema** (`src/server/db/schema.ts`): shop_settings (single row), staff (owner/staff, hashed PIN, barber flag, commission), categories, catalog_items (services + products), orders (pay-then-confirm status, DuitNow/cash, discount, SST, who confirmed/cancelled/voided), order_items (price/commission snapshots), receipt_counters, day_closes, audit_log.
 - **Integrity in the database itself:** CHECK constraints for every enum, non-negative money, discount ≤ subtotal, rates 0–100%, single settings row; unique receipt numbers; foreign keys. Verified each rejects bad data.

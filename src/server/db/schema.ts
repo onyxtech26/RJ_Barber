@@ -74,6 +74,22 @@ export const staff = sqliteTable('staff', {
   check('staff_commission_valid', sql`commission_bps BETWEEN 0 AND 10000`),
 ]);
 
+// Signed-in sessions. The cookie holds a random token; only its SHA-256 hash is stored here,
+// so a copied database file can't be used to impersonate anyone.
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(), // sha256(token) hex
+    staffId: text('staff_id')
+      .notNull()
+      .references(() => staff.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [index('sessions_staff_idx').on(t.staffId)]
+);
+
 export const categories = sqliteTable('categories', {
   id: id(),
   name: text('name').notNull().unique(),
@@ -227,6 +243,11 @@ export const auditLog = sqliteTable(
 // Relations (for db.query.* with nested data)
 export const staffRelations = relations(staff, ({ many }) => ({
   orderItems: many(orderItems),
+  sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  staff: one(staff, { fields: [sessions.staffId], references: [staff.id] }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -259,6 +280,7 @@ export const dayClosesRelations = relations(dayCloses, ({ one, many }) => ({
 export type ShopSettings = typeof shopSettings.$inferSelect;
 export type Staff = typeof staff.$inferSelect;
 export type NewStaff = typeof staff.$inferInsert;
+export type Session = typeof sessions.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type CatalogItem = typeof catalogItems.$inferSelect;
 export type NewCatalogItem = typeof catalogItems.$inferInsert;

@@ -10,6 +10,7 @@ import {
   orderItems,
   orders,
   receiptCounters,
+  sessions,
   shopSettings,
   staff,
   type NewCatalogItem,
@@ -34,7 +35,7 @@ async function main() {
       process.exit(1);
     }
     await db.transaction(async (tx) => {
-      for (const table of [auditLog, orderItems, orders, dayCloses, receiptCounters, catalogItems, categories, staff, shopSettings]) {
+      for (const table of [sessions, auditLog, orderItems, orders, dayCloses, receiptCounters, catalogItems, categories, staff, shopSettings]) {
         await tx.delete(table);
       }
     });

@@ -1,14 +1,20 @@
+import { redirect } from 'next/navigation';
 import { BrandLogo } from '@/components/brand-logo';
+import { PinLogin } from '@/features/auth/pin-login';
+import { getLoginStaff } from '@/features/auth/queries';
+import { getCurrentStaff } from '@/server/auth/session';
 
-// Placeholder — the staff PIN pad with server-side verification is built in Phase 3.
-export default function LoginPage() {
+export default async function LoginPage() {
+  if (await getCurrentStaff()) redirect('/');
+  const staffList = await getLoginStaff();
+
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 p-6 text-center">
-      <BrandLogo size={160} />
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">RJ Barber Salon</h1>
-        <p className="text-muted-foreground">Staff PIN sign-in is coming soon.</p>
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-8 p-6">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <BrandLogo size={112} />
+        <h1 className="text-2xl font-bold tracking-tight">RJ Barber Salon</h1>
       </div>
+      <PinLogin staffList={staffList} />
     </div>
   );
 }
