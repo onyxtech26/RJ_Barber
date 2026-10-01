@@ -33,6 +33,16 @@ if not exist "node_modules\" (
     )
 )
 
+echo [INFO] Preparing database...
+call npm run db:setup
+if %ERRORLEVEL% NEQ 0 (
+    color 0C
+    echo [ERROR] Database setup failed!
+    pause
+    exit /b 1
+)
+call npm run db:backup
+
 echo [INFO] Starting Next.js development server...
 echo [INFO] App will be available at: http://localhost:3000
 echo.
