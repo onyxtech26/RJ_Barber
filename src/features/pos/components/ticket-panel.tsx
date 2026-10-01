@@ -20,6 +20,7 @@ export function TicketPanel({
   pricingError,
   sstRateBps,
   chargingMethod,
+  chargeDisabled,
   onCustomerName,
   onQuantity,
   onBarber,
@@ -38,6 +39,7 @@ export function TicketPanel({
   pricingError: string | null;
   sstRateBps: number;
   chargingMethod: PaymentMethod | null;
+  chargeDisabled: boolean;
   onCustomerName: (name: string) => void;
   onQuantity: (key: string, delta: number) => void;
   onBarber: (key: string, barberId: string | null) => void;
@@ -49,7 +51,7 @@ export function TicketPanel({
   pendingTray: React.ReactNode;
 }) {
   const isEmpty = lines.length === 0;
-  const canCharge = !isEmpty && totals !== null && totals.totalSen > 0 && chargingMethod === null;
+  const canCharge = !isEmpty && !chargeDisabled && totals !== null && totals.totalSen > 0 && chargingMethod === null;
 
   return (
     <aside className="flex min-h-0 flex-col border-t bg-card lg:border-t-0 lg:border-l">

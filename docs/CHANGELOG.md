@@ -6,6 +6,20 @@ Format each entry: what was done, why it mattered, and any key decisions.
 ---
 
 ## 2026-10-01
+### Phase 6 — Day Close and owner Settings
+- **Day Close** (`/close`, owner only): takings, DuitNow total ("check bank"), cash total ("in hand"), voided/cancelled, discounts, SST, a per-barber table (services, net sales, commission) and products sold. Day picker plus a reminder listing earlier days with sales that were never closed.
+- **Closing** is refused while any sale for that day is still awaiting payment. It freezes the report in `day_closes.totals`, links the day's orders (`day_close_id`), blocks voids and new sales for that date (banner + disabled charge buttons on the terminal, plus a re-check inside `createOrder`'s transaction so a sale can't race a close), and writes a `rj-pos-close-YYYY-MM-DD.db` backup. **Reopen** (reason required) undoes it; the previous snapshot is kept in the audit log.
+- **Settings** (`/settings`, owner only, three tabs):
+  - *Shop & payments:* name, address, phone, receipt footer, SST on/off with rate and required registration number, discount-approval limit, DuitNow account name, and DuitNow QR upload/replace/remove.
+  - *Services & products:* categories and items (service/product, price, optional commission override, show/hide). Nothing is deleted — receipts reference items.
+  - *Staff:* add (with PIN), edit role/barber/commission, deactivate, reset PIN. Guards: can't remove the last active owner, can't deactivate yourself. Deactivating, demoting an owner or resetting a PIN signs that person out everywhere; a PIN reset also clears a lockout.
+- **QR upload security:** stored in `data/uploads/` (not `public/`), served by `/duitnow-qr` only to signed-in staff, file type decided by magic bytes (PNG/JPEG/WebP), 4 MB cap with a friendly error; old file deleted on replace; path is checked to stay inside `data/uploads`.
+- **Schema:** migration `0003` adds `order_items.discount_share_sen` so barber sales can be reported net of discounts.
+- **Refactor:** backup logic moved to `src/server/db/backup-core.ts`, shared by the start-up script and Day Close.
+- **Bug avoided — broken generated migration:** drizzle-kit rebuilt `order_items` to change a CHECK constraint and its copy step selected the new `discount_share_sen` column *from the old table*, which would have failed on any existing database. Hand-edited to insert `0`; DB copied before applying; verified row count, constraint and foreign keys afterwards. Lesson: always read generated SQLite migrations.
+- **Lint catch:** React's purity rule flagged `Date.now()` in render (server/client mismatch); lock status is now computed on the server.
+- **Verified in the browser (as owner):** report numbers match the DB (RM 82 takings, RM 62 DuitNow, RM 20 cash, RM 30 voided, Barber 1: 4 services / RM 82 / RM 41 commission); close blocked by a pending sale; close with notes → snapshot, backup file, orders linked; terminal banner + charge disabled; reopen restores everything and logs the reason; SST requires reg. no., then adds 8% on the terminal; QR upload rejects a fake PNG and a 4.5 MB file, accepts a real PNG, shows it on the payment screen; `/duitnow-qr` → login redirect without a cookie and 401 with a forged one; catalog price edit + hide removes it from the terminal; last-owner guard; new staff can sign in and appear as a barber; deactivating revokes their sessions (planted session went 200 → 401); PIN reset with mismatch guard clears the lockout; no overflow at 375px on all new pages. Test edits (Buzz Cut, SST) were restored afterwards.
+
 ### Phase 5 — Orders page and voids
 - **Orders list** (`/orders`): day picker with previous/next/today, status chips (paid, awaiting payment, voided, cancelled), method chips (DuitNow, cash), and search by receipt number, customer name or phone. Each row shows time, customer, receipt no., items, barbers, status and total.
 - **Day summary cards:** takings (paid only), DuitNow total, cash total, and "not counted" (pending + voided, with counts incl. cancelled).

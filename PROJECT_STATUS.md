@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-Phases 0–5 done: POS terminal end to end, plus the Orders page (day view with takings summary, status/method filters, search across all dates, sale detail with history, owner-only void with reason). Next: Phase 6 — Day Close + owner Settings.
+Phases 0–6 done: terminal, orders, Day Close (report, close/reopen, backup on close) and owner Settings (shop + SST + discount limit + DuitNow QR upload, services & products, staff & PINs). All core features exist. Next: Phase 7 — receipt printing (80mm), tablet QA, production run setup, README.
 
 ---
 
@@ -17,6 +17,7 @@ Phases 0–5 done: POS terminal end to end, plus the Orders page (day view with 
 - [x] Set up cross-session project tracking (this system)
 - [x] Phase 0 — tagged old system `pre-pos-redesign`, read Next 16 docs (middleware → `proxy.ts`)
 - [x] Phase 1 — removed booking/WhatsApp/queue/till/Supabase/Redis; light theme from logo; POS shell + placeholder routes
+- [x] Phase 6 — Day Close (DuitNow vs cash, discounts/SST, per-barber net sales + commission, products sold; blocked while sales are pending; freezes snapshot, links orders, blocks new sales and voids for that date, backup on close; owner reopen with reason; unclosed-days reminder) + Settings (shop details, SST with reg no., discount approval limit, DuitNow account name + QR upload served at `/duitnow-qr`; catalog editor with hide-not-delete; staff add/edit/deactivate, last-owner guard, PIN reset that clears lockout and revokes sessions)
 - [x] Phase 5 — Orders: URL-based filters (date, status, method, search), day summary (takings / DuitNow / cash / not counted), sale detail with history timeline, owner-only commission view, owner void (paid only, reason required, blocked once the day is closed), audit `order.voided`
 - [x] Phase 4 — POS terminal: catalog grid + search, ticket with barber per line, discounts (owner PIN above threshold, shared lockout), server-side pricing/commission/SST, receipt numbers, DuitNow/cash payment screen with change calculator, pending tray, cancel, switch method, receipt dialog; pricing unit tests (`npm test`)
 - [x] Phase 3 — Staff PIN auth: DB-backed sessions (hashed token in httpOnly cookie, 12h), `proxy.ts` cookie-presence redirect, `requireStaff()`/`requireOwner()` DAL checks in pages/queries, owner-only nav, 5-try / 5-min lockout, audit log for login/logout/failures
@@ -26,8 +27,7 @@ Phases 0–5 done: POS terminal end to end, plus the Orders page (day view with 
 - (nothing active)
 
 ### ⏭️ Next / To do
-- [ ] Phase 6 — Day close (DuitNow vs cash totals, per-barber sales + commission, lock day) + owner settings (incl. DuitNow QR upload served at `/duitnow-qr` — the payment screen already points there when `duitnow_qr_path` is set)
-- [ ] Phase 7 — receipt reprint button on the order detail page + 80mm print layout, tablet QA, tests for pricing/state rules, README
+- [ ] Phase 7 — receipt reprint button on the order detail page + 80mm print layout; printable Day Close report; production run (`next build` + `next start` in run.bat instead of `next dev`); decide on cookie `secure` for LAN access; README rewrite, tablet QA, tests for pricing/state rules, README
 
 ### 💤 Backlog / ideas
 - Move from SQLite to hosted Postgres if the client wants cloud access later
@@ -49,6 +49,9 @@ Phases 0–5 done: POS terminal end to end, plus the Orders page (day view with 
 - **Pricing rules:** `src/lib/pricing.ts` is the single source of ticket maths (client preview + server). Commission is on the discounted line value (discount split proportionally, largest-remainder rounding), before SST. SST is charged on the discounted subtotal. Server recomputes everything; client only sends item ids, quantities, barber ids.
 - **Order flow:** Charge creates the order as `awaiting_payment` with a receipt number (`RJ-YYYYMMDD-NNN`, per-day counter). Confirm/cancel/switch-method are conditional updates (`WHERE status = 'awaiting_payment'`), so double-confirm can't happen. The terminal generates the order UUID; a retry of the same ticket reuses it (idempotent), any ticket edit makes a new one.
 - **Voids:** owner only, `paid` → `voided`, never after the day is closed (`orders.day_close_id` set). Phase 6's day close must set `day_close_id` on that day's orders so this guard engages. Voided/cancelled/pending sales are excluded from takings.
+- **Day close:** `day_closes.totals` is a frozen `DayReport` (`src/features/close/report.ts`); closing links that day's orders via `day_close_id`, which blocks voids and (via a check inside `createOrder`'s transaction) new sales. Reopen deletes the close and unlinks orders; the old snapshot is kept in the audit log. Backups: `rj-pos-YYYY-MM-DD.db` at start-up, `rj-pos-close-YYYY-MM-DD.db` on each close (30 of each kept).
+- **Uploads:** `data/uploads/` (never `public/`), type checked by magic bytes, max 4 MB (`experimental.serverActions.bodySizeLimit = 5mb`).
+- **Migration gotcha:** drizzle-kit's SQLite table-rebuild migrations can SELECT a brand-new column from the old table (happened in `0003`) — always read generated SQL before applying.
 - **Enums** live in `src/lib/enums.ts` (client-safe); `schema.ts` re-exports them.
 - **Testing tip:** the browser tool's `type` action doesn't fire `keydown`, so the PIN pad ignores it — use `key` presses or click the on-screen keypad.
 
@@ -60,3 +63,4 @@ Phases 0–5 done: POS terminal end to end, plus the Orders page (day view with 
 - **2026-10-01** — Phase 3: staff PIN login, DB sessions, roles, lockout, audit log.
 - **2026-10-01** — Phase 4: POS terminal — ticket, discounts with owner approval, DuitNow/cash payment, pending tray, receipts.
 - **2026-10-01** — Phase 5: Orders page — filters, search, day summary, sale detail, owner void.
+- **2026-10-01** — Phase 6: Day Close + owner Settings (shop/SST/QR, catalog, staff/PINs).

@@ -3,7 +3,7 @@
 import { refresh } from 'next/cache';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { db, orderItems, orders, receiptCounters, staff, catalogItems, type PaymentMethod } from '@/server/db';
+import { db, dayCloses, orderItems, orders, receiptCounters, staff, catalogItems, type PaymentMethod } from '@/server/db';
 import { logAudit } from '@/server/audit';
 import { attemptPin } from '@/server/auth/pin-attempt';
 import { requireStaff } from '@/server/auth/session';
@@ -116,69 +116,79 @@ export async function createOrder(input: CreateOrderInput): Promise<ActionResult
   }
 
   const businessDate = toBusinessDate();
+  if (await isDayClosed(businessDate)) return { ok: false, error: DAY_CLOSED_MESSAGE };
 
-  await db.transaction(async (tx) => {
-    // Next receipt number for today, atomically: RJ-20261001-001, -002, ...
-    const [counter] = await tx
-      .insert(receiptCounters)
-      .values({ businessDate, lastSeq: 1 })
-      .onConflictDoUpdate({ target: receiptCounters.businessDate, set: { lastSeq: sql`${receiptCounters.lastSeq} + 1` } })
-      .returning({ seq: receiptCounters.lastSeq });
-    const receiptNo = `RJ-${businessDate.replaceAll('-', '')}-${String(counter.seq).padStart(3, '0')}`;
+  try {
+    await db.transaction(async (tx) => {
+      // Checked again inside the transaction so a sale can't slip in while the owner is closing the day.
+      if (await isDayClosed(businessDate, tx)) throw new DayClosedError();
 
-    await tx.insert(orders).values({
-      id: ticket.id,
-      receiptNo,
-      businessDate,
-      status: 'awaiting_payment',
-      paymentMethod: ticket.paymentMethod,
-      customerName: ticket.customerName ?? null,
-      customerPhone: ticket.customerPhone ?? null,
-      subtotalSen: totals.subtotalSen,
-      discountType: ticket.discount?.type ?? null,
-      discountValue: ticket.discount?.value ?? null,
-      discountSen: totals.discountSen,
-      discountReason: ticket.discount?.reason ?? null,
-      discountApprovedBy,
-      sstRateBps,
-      sstSen: totals.sstSen,
-      totalSen: totals.totalSen,
-      createdBy: me.id,
-    });
+      // Next receipt number for today, atomically: RJ-20261001-001, -002, ...
+      const [counter] = await tx
+        .insert(receiptCounters)
+        .values({ businessDate, lastSeq: 1 })
+        .onConflictDoUpdate({ target: receiptCounters.businessDate, set: { lastSeq: sql`${receiptCounters.lastSeq} + 1` } })
+        .returning({ seq: receiptCounters.lastSeq });
+      const receiptNo = `RJ-${businessDate.replaceAll('-', '')}-${String(counter.seq).padStart(3, '0')}`;
 
-    await tx.insert(orderItems).values(
-      resolvedLines.map(({ line, item, commissionBps }, i) => ({
-        orderId: ticket.id,
-        catalogItemId: item.id,
-        position: i,
-        kind: item.kind,
-        name: item.name,
-        unitPriceSen: item.priceSen,
-        quantity: line.quantity,
-        lineTotalSen: totals.lines[i].lineTotalSen,
-        barberId: line.barberId,
-        commissionBps,
-        commissionSen: totals.lines[i].commissionSen,
-      }))
-    );
+      await tx.insert(orders).values({
+        id: ticket.id,
+        receiptNo,
+        businessDate,
+        status: 'awaiting_payment',
+        paymentMethod: ticket.paymentMethod,
+        customerName: ticket.customerName ?? null,
+        customerPhone: ticket.customerPhone ?? null,
+        subtotalSen: totals.subtotalSen,
+        discountType: ticket.discount?.type ?? null,
+        discountValue: ticket.discount?.value ?? null,
+        discountSen: totals.discountSen,
+        discountReason: ticket.discount?.reason ?? null,
+        discountApprovedBy,
+        sstRateBps,
+        sstSen: totals.sstSen,
+        totalSen: totals.totalSen,
+        createdBy: me.id,
+      });
 
-    await logAudit(
-      { actorId: me.id, action: 'order.created', entity: 'order', entityId: ticket.id, details: { receiptNo, totalSen: totals.totalSen } },
-      tx
-    );
-    if (discountApprovedBy && discountApprovedBy !== me.id) {
+      await tx.insert(orderItems).values(
+        resolvedLines.map(({ line, item, commissionBps }, i) => ({
+          orderId: ticket.id,
+          catalogItemId: item.id,
+          position: i,
+          kind: item.kind,
+          name: item.name,
+          unitPriceSen: item.priceSen,
+          quantity: line.quantity,
+          lineTotalSen: totals.lines[i].lineTotalSen,
+          discountShareSen: totals.lines[i].discountShareSen,
+          barberId: line.barberId,
+          commissionBps,
+          commissionSen: totals.lines[i].commissionSen,
+        }))
+      );
+
       await logAudit(
-        {
-          actorId: discountApprovedBy,
-          action: 'discount.approved',
-          entity: 'order',
-          entityId: ticket.id,
-          details: { discountSen: totals.discountSen, requestedBy: me.id },
-        },
+        { actorId: me.id, action: 'order.created', entity: 'order', entityId: ticket.id, details: { receiptNo, totalSen: totals.totalSen } },
         tx
       );
-    }
-  });
+      if (discountApprovedBy && discountApprovedBy !== me.id) {
+        await logAudit(
+          {
+            actorId: discountApprovedBy,
+            action: 'discount.approved',
+            entity: 'order',
+            entityId: ticket.id,
+            details: { discountSen: totals.discountSen, requestedBy: me.id },
+          },
+          tx
+        );
+      }
+    });
+  } catch (error) {
+    if (error instanceof DayClosedError) return { ok: false, error: DAY_CLOSED_MESSAGE };
+    throw error;
+  }
 
   const created = await loadPendingOrder(ticket.id);
   refresh();
@@ -284,6 +294,17 @@ export async function changePaymentMethod(rawOrderId: string, rawMethod: Payment
 
   refresh();
   return { ok: true, data: (await loadPendingOrder(orderId))!.summary };
+}
+
+const DAY_CLOSED_MESSAGE = 'Today has been closed by the owner. Ask them to reopen it to take more sales.';
+class DayClosedError extends Error {}
+
+async function isDayClosed(businessDate: string, executor: Pick<typeof db, 'query'> = db) {
+  const close = await executor.query.dayCloses.findFirst({
+    where: eq(dayCloses.businessDate, businessDate),
+    columns: { id: true },
+  });
+  return close !== undefined;
 }
 
 async function loadPendingOrder(orderId: string) {

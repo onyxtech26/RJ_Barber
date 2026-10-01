@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { allocateProportionally, priceTicket, PricingError } from './pricing';
-import { formatRM, parseRM } from './money';
+import { formatPercent, formatRM, parsePercent, parseRM } from './money';
 
 const line = (unitPriceSen: number, quantity = 1, commissionBps = 0) => ({ unitPriceSen, quantity, commissionBps });
 
@@ -86,6 +86,15 @@ describe('money helpers', () => {
     assert.equal(parseRM('4.555'), null);
     assert.equal(parseRM(''), null);
     assert.equal(parseRM('-5'), null);
+  });
+
+  test('parsePercent / formatPercent', () => {
+    assert.equal(parsePercent('50'), 5000);
+    assert.equal(parsePercent('12.5%'), 1250);
+    assert.equal(parsePercent('0'), 0);
+    assert.equal(parsePercent('100.01'), null);
+    assert.equal(parsePercent('abc'), null);
+    assert.equal(formatPercent(1250), '12.5');
   });
 
   test('formatRM', () => {

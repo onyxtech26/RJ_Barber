@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState, useTransition } from 'react';
-import { Scissors } from 'lucide-react';
+import { Lock, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import type { ItemKind, PaymentMethod } from '@/lib/enums';
@@ -30,7 +30,7 @@ export type TicketLine = {
 export type TicketDiscount = { type: 'percent' | 'amount'; value: number; reason: string };
 
 export function Terminal({ data }: { data: TerminalData }) {
-  const { currentStaff, catalog, barbers, owners, settings, pendingOrders } = data;
+  const { currentStaff, catalog, barbers, owners, settings, pendingOrders, isTodayClosed } = data;
 
   const defaultBarberId = currentStaff.isBarber ? currentStaff.id : (barbers[0]?.id ?? null);
   const [activeBarberId, setActiveBarberId] = useState<string | null>(defaultBarberId);
@@ -158,6 +158,12 @@ export function Terminal({ data }: { data: TerminalData }) {
   return (
     <div className="grid flex-1 grid-cols-1 lg:h-[calc(100dvh-4rem)] lg:flex-none lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-1 lg:overflow-hidden">
       <div className="flex min-h-0 flex-col">
+        {isTodayClosed && (
+          <div className="flex items-center gap-2 border-b bg-warning-soft px-4 py-2.5 text-sm font-medium text-warning">
+            <Lock className="size-4 shrink-0" />
+            Today has been closed. Pending sales can still be settled; new sales need the owner to reopen the day.
+          </div>
+        )}
         {barbers.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto border-b bg-card px-4 py-2.5">
             <span className="shrink-0 text-sm text-muted-foreground">Barber:</span>
@@ -188,6 +194,7 @@ export function Terminal({ data }: { data: TerminalData }) {
         pricingError={pricingError}
         sstRateBps={settings.sstRateBps}
         chargingMethod={chargingMethod}
+        chargeDisabled={isTodayClosed}
         onCustomerName={updateCustomerName}
         onQuantity={(key, delta) =>
           updateLines((prev) =>

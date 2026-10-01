@@ -23,3 +23,14 @@ export function parseRM(input: string): number | null {
 export function applyBps(sen: number, bps: number): number {
   return Math.round((sen * bps) / 10_000);
 }
+
+/** "50", "12.5" → 5000 / 1250 basis points. Returns null if not a valid 0–100 percentage. */
+export function parsePercent(input: string): number | null {
+  const cleaned = input.replace('%', '').trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const bps = Math.round(Number(cleaned) * 100);
+  return bps <= 10_000 ? bps : null;
+}
+
+/** 5000 → "50", 1250 → "12.5" */
+export const formatPercent = (bps: number) => String(bps / 100);

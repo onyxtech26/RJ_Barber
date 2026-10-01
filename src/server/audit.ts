@@ -13,7 +13,14 @@ export type AuditAction =
   | 'order.cancelled'
   | 'order.method_changed'
   | 'order.voided'
-  | 'discount.approved';
+  | 'discount.approved'
+  | 'day.closed'
+  | 'day.reopened'
+  | 'settings.updated'
+  | 'catalog.updated'
+  | 'staff.created'
+  | 'staff.updated'
+  | 'staff.pin_reset';
 
 /** Append-only record of who did what. Pass a transaction to log atomically with the change. */
 export async function logAudit(

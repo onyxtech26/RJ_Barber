@@ -1,7 +1,8 @@
 import 'server-only';
 import { connection } from 'next/server';
 import { eq } from 'drizzle-orm';
-import { db, orders, type PaymentMethod } from '@/server/db';
+import { dayCloses, db, orders, type PaymentMethod } from '@/server/db';
+import { toBusinessDate } from '@/lib/business-date';
 import { requireStaff } from '@/server/auth/session';
 import { getActiveCatalog } from '@/features/catalog/queries';
 
@@ -22,7 +23,7 @@ export async function getTerminalData() {
   await connection();
   const currentStaff = await requireStaff();
 
-  const [catalog, barbers, owners, settings, pendingOrders] = await Promise.all([
+  const [catalog, barbers, owners, settings, pendingOrders, todayClose] = await Promise.all([
     getActiveCatalog(),
     db.query.staff.findMany({
       where: (s, { and, eq }) => and(eq(s.isActive, true), eq(s.isBarber, true)),
@@ -44,6 +45,7 @@ export async function getTerminalData() {
       },
     }),
     getPendingOrders(),
+    db.query.dayCloses.findFirst({ where: eq(dayCloses.businessDate, toBusinessDate()), columns: { id: true } }),
   ]);
 
   return {
@@ -58,6 +60,7 @@ export async function getTerminalData() {
       duitnowAccountName: settings?.duitnowAccountName ?? null,
     },
     pendingOrders,
+    isTodayClosed: todayClose !== undefined,
   };
 }
 export type TerminalData = Awaited<ReturnType<typeof getTerminalData>>;

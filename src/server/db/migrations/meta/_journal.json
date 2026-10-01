@@ -22,6 +22,13 @@
       "when": 1790839299222,
       "tag": "0002_order_item_position",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790840335129,
+      "tag": "0003_discount_share",
+      "breakpoints": true
     }
   ]
 }

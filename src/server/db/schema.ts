@@ -205,6 +205,8 @@ export const orderItems = sqliteTable(
     unitPriceSen: integer('unit_price_sen').notNull(),
     quantity: integer('quantity').notNull().default(1),
     lineTotalSen: integer('line_total_sen').notNull(),
+    // This line's share of the ticket discount, so per-barber sales can be reported net of discounts.
+    discountShareSen: integer('discount_share_sen').notNull().default(0),
     barberId: text('barber_id').references(() => staff.id),
     commissionBps: integer('commission_bps').notNull().default(0),
     commissionSen: integer('commission_sen').notNull().default(0),
@@ -213,7 +215,7 @@ export const orderItems = sqliteTable(
     index('order_items_order_idx').on(t.orderId),
     index('order_items_barber_idx').on(t.barberId),
     check('order_items_kind_valid', inList('kind', ITEM_KINDS)),
-    check('order_items_amounts_valid', sql`${t.quantity} > 0 AND ${t.unitPriceSen} >= 0 AND ${t.lineTotalSen} >= 0 AND ${t.commissionSen} >= 0`),
+    check('order_items_amounts_valid', sql`${t.quantity} > 0 AND ${t.unitPriceSen} >= 0 AND ${t.lineTotalSen} >= 0 AND ${t.commissionSen} >= 0 AND ${t.discountShareSen} >= 0 AND ${t.discountShareSen} <= ${t.lineTotalSen}`),
     check('order_items_commission_valid', sql`${t.commissionBps} BETWEEN 0 AND 10000`),
   ]
 );
