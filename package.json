@@ -13,7 +13,8 @@
     "db:reset": "tsx --env-file-if-exists=.env.local src/server/db/seed.ts --reset",
     "db:backup": "tsx --env-file-if-exists=.env.local src/server/db/backup.ts",
     "db:setup": "npm run db:migrate && npm run db:seed",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

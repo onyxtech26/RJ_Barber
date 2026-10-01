@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-Phases 0–3 done: light POS shell, SQLite data layer, and staff PIN login with DB sessions, owner/staff roles and lockout. The Terminal shows the live catalog read-only. Next: Phase 4 — the POS terminal itself (ticket, charge, DuitNow/cash, pending tray, confirm, receipt).
+Phases 0–4 done: the POS terminal works end to end — build a ticket (barber per line, discount with owner approval, SST), charge by DuitNow or cash, confirm payment, pending tray, cancel, switch method, on-screen receipt. Next: Phase 5 — Orders page (history, search, receipt view/reprint, owner void).
 
 ---
 
@@ -17,6 +17,7 @@ Phases 0–3 done: light POS shell, SQLite data layer, and staff PIN login with 
 - [x] Set up cross-session project tracking (this system)
 - [x] Phase 0 — tagged old system `pre-pos-redesign`, read Next 16 docs (middleware → `proxy.ts`)
 - [x] Phase 1 — removed booking/WhatsApp/queue/till/Supabase/Redis; light theme from logo; POS shell + placeholder routes
+- [x] Phase 4 — POS terminal: catalog grid + search, ticket with barber per line, discounts (owner PIN above threshold, shared lockout), server-side pricing/commission/SST, receipt numbers, DuitNow/cash payment screen with change calculator, pending tray, cancel, switch method, receipt dialog; pricing unit tests (`npm test`)
 - [x] Phase 3 — Staff PIN auth: DB-backed sessions (hashed token in httpOnly cookie, 12h), `proxy.ts` cookie-presence redirect, `requireStaff()`/`requireOwner()` DAL checks in pages/queries, owner-only nav, 5-try / 5-min lockout, audit log for login/logout/failures
 - [x] Phase 2 — Drizzle on SQLite via `@libsql/client`: schema + CHECK constraints, migrations, seed (RM catalog, placeholder staff, generated PINs), daily backup, `run.bat` prepares DB on launch
 
@@ -24,9 +25,8 @@ Phases 0–3 done: light POS shell, SQLite data layer, and staff PIN login with 
 - (nothing active)
 
 ### ⏭️ Next / To do
-- [ ] Phase 4 — POS terminal: catalog, ticket (barber per line), discount, Charge → DuitNow QR screen / cash change calc → Pending tray → confirm → receipt
 - [ ] Phase 5 — Orders: history, search, reprint, owner void with reason
-- [ ] Phase 6 — Day close (DuitNow vs cash totals, per-barber sales + commission, lock day) + owner settings
+- [ ] Phase 6 — Day close (DuitNow vs cash totals, per-barber sales + commission, lock day) + owner settings (incl. DuitNow QR upload served at `/duitnow-qr` — the payment screen already points there when `duitnow_qr_path` is set)
 - [ ] Phase 7 — 80mm print layout, tablet QA, tests for pricing/state rules, README
 
 ### 💤 Backlog / ideas
@@ -46,6 +46,9 @@ Phases 0–3 done: light POS shell, SQLite data layer, and staff PIN login with 
 - **Theme:** light only. Tokens in `src/app/globals.css`: `--primary` = black ink, `--brand` = logo yellow `#F5C400` used only as a fill with black text (Charge button, active nav).
 - **Next 16:** `middleware.ts` is renamed `proxy.ts`; use it only for optimistic redirects — real auth checks live in server code.
 - **Auth rules:** every page, query and Server Action calls `requireStaff()` or `requireOwner()` (`src/server/auth/session.ts`) — never rely on the layout or proxy alone. Owner-only: Day Close, Settings, voids. Changing a PIN or deactivating staff must call `revokeAllSessions(staffId)`. Session cookie `rj_session` is `secure` only in production (Chrome treats http://localhost as secure; accessing via LAN IP over http in production would drop it).
+- **Pricing rules:** `src/lib/pricing.ts` is the single source of ticket maths (client preview + server). Commission is on the discounted line value (discount split proportionally, largest-remainder rounding), before SST. SST is charged on the discounted subtotal. Server recomputes everything; client only sends item ids, quantities, barber ids.
+- **Order flow:** Charge creates the order as `awaiting_payment` with a receipt number (`RJ-YYYYMMDD-NNN`, per-day counter). Confirm/cancel/switch-method are conditional updates (`WHERE status = 'awaiting_payment'`), so double-confirm can't happen. The terminal generates the order UUID; a retry of the same ticket reuses it (idempotent), any ticket edit makes a new one.
+- **Enums** live in `src/lib/enums.ts` (client-safe); `schema.ts` re-exports them.
 - **Testing tip:** the browser tool's `type` action doesn't fire `keydown`, so the PIN pad ignores it — use `key` presses or click the on-screen keypad.
 
 ---
@@ -54,3 +57,4 @@ Phases 0–3 done: light POS shell, SQLite data layer, and staff PIN login with 
 - **2026-10-01** — Set up project tracking; planned POS-only redesign; completed Phase 0 (tag, docs) and Phase 1 (strip-down, light theme, shell).
 - **2026-10-01** — Phase 2: SQLite data layer, migrations, seed, backups; Terminal reads live catalog.
 - **2026-10-01** — Phase 3: staff PIN login, DB sessions, roles, lockout, audit log.
+- **2026-10-01** — Phase 4: POS terminal — ticket, discounts with owner approval, DuitNow/cash payment, pending tray, receipts.

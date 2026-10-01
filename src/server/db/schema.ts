@@ -1,5 +1,8 @@
 import { relations, sql } from 'drizzle-orm';
 import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { DISCOUNT_TYPES, ITEM_KINDS, ORDER_STATUSES, PAYMENT_METHODS, STAFF_ROLES } from '../../lib/enums';
+
+export * from '../../lib/enums';
 
 /*
  * Conventions
@@ -29,11 +32,6 @@ const updatedAt = () =>
     .default(sql`(unixepoch('subsec') * 1000)`)
     .$onUpdateFn(() => new Date());
 
-export const STAFF_ROLES = ['owner', 'staff'] as const;
-export const ITEM_KINDS = ['service', 'product'] as const;
-export const PAYMENT_METHODS = ['duitnow', 'cash'] as const;
-export const ORDER_STATUSES = ['awaiting_payment', 'paid', 'cancelled', 'voided'] as const;
-export const DISCOUNT_TYPES = ['percent', 'amount'] as const;
 
 // Single row (id = 1): everything printed on receipts and shop-wide rules.
 export const shopSettings = sqliteTable('shop_settings', {
@@ -201,6 +199,7 @@ export const orderItems = sqliteTable(
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
     catalogItemId: text('catalog_item_id').references(() => catalogItems.id, { onDelete: 'set null' }),
+    position: integer('position').notNull().default(0), // line order on the receipt
     kind: text('kind', { enum: ITEM_KINDS }).notNull(),
     name: text('name').notNull(),
     unitPriceSen: integer('unit_price_sen').notNull(),
@@ -291,8 +290,3 @@ export type NewOrderItem = typeof orderItems.$inferInsert;
 export type DayClose = typeof dayCloses.$inferSelect;
 export type AuditEntry = typeof auditLog.$inferSelect;
 
-export type StaffRole = (typeof STAFF_ROLES)[number];
-export type ItemKind = (typeof ITEM_KINDS)[number];
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
-export type OrderStatus = (typeof ORDER_STATUSES)[number];
-export type DiscountType = (typeof DISCOUNT_TYPES)[number];

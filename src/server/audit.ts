@@ -7,7 +7,12 @@ export type AuditAction =
   | 'auth.login'
   | 'auth.logout'
   | 'auth.pin_failed'
-  | 'auth.locked';
+  | 'auth.locked'
+  | 'order.created'
+  | 'order.paid'
+  | 'order.cancelled'
+  | 'order.method_changed'
+  | 'discount.approved';
 
 /** Append-only record of who did what. Pass a transaction to log atomically with the change. */
 export async function logAudit(

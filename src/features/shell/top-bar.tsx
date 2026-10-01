@@ -21,8 +21,8 @@ export function TopBar({ currentStaff }: { currentStaff: CurrentStaff }) {
   const isOwner = currentStaff.role === 'owner';
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-card">
-      <div className="flex h-16 items-center gap-4 px-4">
+    <header className="sticky top-0 z-30 h-16 border-b bg-card">
+      <div className="flex h-full items-center gap-4 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
           <BrandLogo size={40} />
           <div className="hidden leading-tight sm:block">
@@ -58,7 +58,7 @@ export function TopBar({ currentStaff }: { currentStaff: CurrentStaff }) {
             <p className="text-xs text-muted-foreground capitalize">{currentStaff.role}</p>
           </div>
           <form action={signOut}>
-            <Button type="submit" variant="outline" size="lg" className="h-11">
+            <Button type="submit" variant="outline" size="lg" className="h-11" aria-label="Switch staff (sign out)">
               <LogOut />
               <span className="hidden sm:inline">Switch</span>
             </Button>

@@ -15,6 +15,13 @@
       "when": 1790838218736,
       "tag": "0001_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790839299222,
+      "tag": "0002_order_item_position",
+      "breakpoints": true
     }
   ]
 }
