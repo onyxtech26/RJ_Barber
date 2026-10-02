@@ -10,7 +10,14 @@ import type { LoginStaff } from './queries';
 const MAX_PIN_LENGTH = 6;
 const MIN_PIN_LENGTH = 4;
 
-export function PinLogin({ staffList }: { staffList: LoginStaff[] }) {
+export function PinLogin({
+  staffList,
+  demoPins,
+}: {
+  staffList: LoginStaff[];
+  /** Online demo only: show each role's demo PIN on its tile. */
+  demoPins: { owner: string; staff: string } | null;
+}) {
   const [selected, setSelected] = useState<LoginStaff | null>(null);
 
   if (!selected) {
@@ -35,6 +42,9 @@ export function PinLogin({ staffList }: { staffList: LoginStaff[] }) {
                 </span>
                 <span className="font-medium">{member.name}</span>
                 <span className="text-xs text-muted-foreground capitalize">{member.role}</span>
+                {demoPins && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs">PIN {demoPins[member.role]}</span>
+                )}
               </button>
             ))}
           </div>

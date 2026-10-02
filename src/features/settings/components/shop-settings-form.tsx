@@ -132,7 +132,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettingsForEdit }
         </div>
       </form>
 
-      <DuitnowQrCard hasQr={Boolean(settings.duitnowQrPath)} />
+      <DuitnowQrCard hasQr={Boolean(settings.duitnowQrType)} />
     </div>
   );
 }
@@ -162,7 +162,7 @@ function DuitnowQrCard({ hasQr }: { hasQr: boolean }) {
     <Section title="DuitNow QR" description="Shown full-size on the payment screen. Use the shop’s static DuitNow QR from your bank app.">
       <div className="flex flex-wrap items-center gap-4">
         {hasQr ? (
-          // eslint-disable-next-line @next/next/no-img-element -- served from data/uploads behind auth
+          // eslint-disable-next-line @next/next/no-img-element -- served from the database behind auth
           <img
             src={`/duitnow-qr?v=${version}`}
             alt="Current DuitNow QR"

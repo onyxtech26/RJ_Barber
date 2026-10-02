@@ -40,7 +40,7 @@ export async function getTerminalData() {
         sstEnabled: true,
         sstRateBps: true,
         discountApprovalThresholdBps: true,
-        duitnowQrPath: true,
+        duitnowQrType: true,
         duitnowAccountName: true,
       },
     }),
@@ -56,7 +56,7 @@ export async function getTerminalData() {
     settings: {
       sstRateBps: settings?.sstEnabled ? settings.sstRateBps : 0,
       discountApprovalThresholdBps: settings?.discountApprovalThresholdBps ?? 2000,
-      hasDuitnowQr: Boolean(settings?.duitnowQrPath),
+      hasDuitnowQr: Boolean(settings?.duitnowQrType),
       duitnowAccountName: settings?.duitnowAccountName ?? null,
     },
     pendingOrders,

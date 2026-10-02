@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-**All 7 phases of the POS redesign are done.** The app runs in production mode from `run.bat` on the shop PC. Next: go-live checklist below (real data from the client, test on the real receipt printer, off-PC backups).
+**All 7 phases of the POS redesign are done**, and `rj-barber.vercel.app` is a self-resetting **demo** (pre-built demo DB copied to /tmp, sample data, PIN hints, demo badge) for showing the barber. Next: show the demo, then the go-live checklist below.
 
 ---
 
@@ -28,6 +28,7 @@
 - (nothing active)
 
 ### ⏭️ Next / To do
+- [ ] Optional: delete the 14 stale empty env vars on the Vercel project (old Supabase/Upstash/WhatsApp/etc.). Optional: switch the demo to Turso if it must keep data between visits.
 - [ ] Go-live: get the client's real staff names, services and prices, and DuitNow QR (they can enter them in Settings)
 - [ ] Go-live: test-print on the actual 80mm printer (margins none, headers off); decide on `--kiosk-printing`
 - [ ] Go-live: install on the shop PC from a clean copy (no `data/`), set real PINs, delete `data/initial-pins.txt`
@@ -59,6 +60,9 @@
 - **Enums** live in `src/lib/enums.ts` (client-safe); `schema.ts` re-exports them.
 - **Production run:** `run.bat` → `db:setup` → `db:backup` → build if `scripts/needs-build.mjs` says source is newer than `.next/BUILD_ID` → `next start -H 127.0.0.1 -p 3000` → Edge `--app` window. Not exposed on the LAN by default (README "Using a tablet" explains how to change it). Session cookie is `secure` only when `x-forwarded-proto` is https.
 - **Printing:** `/print/receipt/[id]` (80mm, `@page size: 80mm auto`) and `/print/day/[date]` (A4, owner only). `src/lib/print.ts` loads them in a hidden iframe and checks for a `data-print-ready` marker before calling `print()`, so error/login pages are never printed.
+- **Two deployments:** shop PC = local SQLite file via `run.bat` (the real POS); Vercel `rj-barber.vercel.app` = **self-resetting demo**: `vercel.json` runs `build:demo-db` (migrate + seed with `DEMO_PINS` + `demo-data.ts` samples → `demo/rj-pos-demo.db`), `outputFileTracingIncludes` bundles it, and `client.ts` copies it to `/tmp` on first use when `VERCEL=1` and no DB URL is set. `IS_DEMO` (`src/lib/demo.ts`) = `VERCEL=1` or `DEMO_MODE=1` → badge, PIN hints on sign-in, no close backups. Functions pinned to `sin1`. Turso (`TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) still supported for a persistent demo; the seed refuses a hosted DB without `SEED_*_PIN`. Empty env vars count as unset (`||`). **After any local `VERCEL=1` build, rebuild normally** so `run.bat` doesn't serve demo-baked static pages.
+- **QR image** lives in `shop_settings.duitnow_qr_image` (blob) + `duitnow_qr_type` — no files on disk anywhere now.
+- **drizzle-kit can't answer its rename prompt in a non-interactive shell:** split "drop column + add column" into two migrations (add first, then drop), as done for 0004/0005.
 - **Testing tip:** the browser tool's `type` action doesn't fire `keydown`, so the PIN pad ignores it — use `key` presses or click the on-screen keypad.
 
 ---
@@ -71,3 +75,5 @@
 - **2026-10-01** — Phase 5: Orders page — filters, search, day summary, sale detail, owner void.
 - **2026-10-01** — Phase 6: Day Close + owner Settings (shop/SST/QR, catalog, staff/PINs).
 - **2026-10-01** — Phase 7: receipt + day-report printing, production run.bat, cookie/LAN hardening, README. Redesign plan complete.
+- **2026-10-01** — Vercel demo prep: Turso support, QR stored in DB, build-time migrate/seed, demo badge, sin1 region. Diagnosed the live 500 (`mkdir 'data'` on read-only Vercel disk).
+- **2026-10-02** — Self-resetting Vercel demo (no external account): bundled demo DB → /tmp, sample sales, PIN hints. Rehearsed with `VERCEL=1` locally; pushed.

@@ -9,6 +9,7 @@ import { backupDatabase } from '@/server/db/backup-core';
 import { logAudit } from '@/server/audit';
 import { requireOwner } from '@/server/auth/session';
 import { toBusinessDate } from '@/lib/business-date';
+import { IS_DEMO } from '@/lib/demo';
 import type { ActionResult } from '@/features/pos/schemas';
 import { buildDayReport } from './report';
 
@@ -71,10 +72,13 @@ export async function closeDay(input: { businessDate: string; notes?: string }):
   }
 
   // Snapshot right after closing, so the day's sales are safe even if the PC is switched off.
-  try {
-    await backupDatabase(libsqlClient, DATABASE_URL, { label: `close-${businessDate}`, overwrite: true });
-  } catch (error) {
-    console.error('Backup after day close failed:', error);
+  // (Not in the online demo: its database is temporary by design and the host disk is read-only.)
+  if (!IS_DEMO) {
+    try {
+      await backupDatabase(libsqlClient, DATABASE_URL, { label: `close-${businessDate}`, overwrite: true });
+    } catch (error) {
+      console.error('Backup after day close failed:', error);
+    }
   }
 
   refresh();

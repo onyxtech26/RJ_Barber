@@ -5,7 +5,26 @@ Format each entry: what was done, why it mattered, and any key decisions.
 
 ---
 
+## 2026-10-02
+### Self-resetting online demo (no database account needed)
+- **Goal:** show the barber a link today, without the user signing up for Turso.
+- **How it works:** the Vercel build runs `npm run build:demo-db` (`scripts/build-demo-db.ts`): migrations → seed with fixed demo PINs → `src/server/db/demo-data.ts` adds 10 sample sales over yesterday and today (yesterday left unclosed for trying Day Close; one void, a 10% discount, a product sale, one pending sale) plus a sample, deliberately non-scannable "DEMO" QR, all priced with the real `priceTicket()`. The resulting `demo/rj-pos-demo.db` (single file, journal mode DELETE) is bundled into every route with `outputFileTracingIncludes`; `client.ts` copies it to `/tmp` (Vercel's only writable place) on first use when `VERCEL=1` and no database URL is set.
+- **Demo affordances:** `IS_DEMO` (`src/lib/demo.ts`, `VERCEL=1` or `DEMO_MODE=1`) shows the demo PINs on the sign-in tiles plus an explanation, the "DEMO · test data only" badge, and skips day-close backups. No Vercel env vars needed.
+- **Decision / trade-off:** chosen by the user over Turso for speed. Each fresh Vercel server starts from the bundled copy, so the demo resets (and visitors re-sign-in) after idle periods — fine for a walkthrough, not for leaving with the client for days. Turso remains supported for a persistent demo.
+- **Bug avoided:** the DB file is prepared at module load, which Next also does during the build; copying into a missing `/tmp` crashed the local rehearsal build — the client now creates the folder first.
+- **Verified (local rehearsal with `VERCEL=1`):** build + traces include the demo DB in every route; first request copies it to tmp; sign-in screen shows PIN hints; owner sign-in; Orders today (RM 95, 1 pending); yesterday's report RM 261.40 with correct discounted commission (Barber 1 RM 57.40 / RM 28.70); unclosed-day reminder; sample QR on the payment screen; payment confirmed; no console errors. Rebuilt normally afterwards so the shop-PC build has no demo badge.
+
 ## 2026-10-01
+### Vercel demo support
+- **Bug — `rj-barber.vercel.app/login` showed "This page couldn't load":** symptom: every request to `/login` returned a server error after the Phase 0–7 commits were pushed (Vercel auto-deployed them). Root cause, from Vercel's runtime logs: `ENOENT: no such file or directory, mkdir 'data'` — the app expected a local SQLite file, but Vercel's disk is read-only (and any file would be lost between requests anyway). The project also still had an *empty* `DATABASE_URL` from the old system, which made the app fall back to the file default. The old version had "worked" there only because it used mock data. Lesson: a shop-PC architecture needs its own plan before being pushed to a repo that auto-deploys.
+- **Fix — demo runs on a hosted Turso database:** `client.ts`/`drizzle.config.ts` use `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` when set (else the local file); empty env vars count as unset. `vercel.json` builds with `db:migrate && db:seed && next build` and pins functions to Singapore (`sin1`). The WAL pragma only runs on local files. The seed refuses to seed a hosted DB without `SEED_OWNER_PIN`/`SEED_STAFF_PIN` (a generated PIN file would vanish with the build machine).
+- **DuitNow QR moved into the database** (migrations `0004` add `duitnow_qr_image` blob + `duitnow_qr_type`, `0005` drop `duitnow_qr_path`): works on read-only hosts, is included in every backup, and removes `data/uploads`. Upload still validates magic bytes and size (4 MB, under Vercel's 4.5 MB request limit); the settings page never sends the image bytes to the browser.
+- **Demo badge:** `DEMO_MODE=1` shows a fixed "DEMO · test data only" pill on every screen (hidden when printing).
+- **Decision — Turso over SQLite-in-/tmp for the demo:** /tmp is per-instance on Vercel, so the client could be logged out or see sales vanish mid-demo. Turso is the same SQLite dialect and driver, so no rewrite; not Supabase, per the client constraint.
+- **Gotcha:** drizzle-kit wants to ask "rename or new column?" when one column is dropped and another added, and can't prompt in a non-interactive shell — split into an add migration and a drop migration.
+- **Verified locally:** migrations 0004/0005 applied to the dev DB (backup taken first); QR upload → served from the DB byte-for-byte (2,799 bytes, `image/png`), no files written; demo badge only when `DEMO_MODE=1`; tsc, eslint, 13 tests, production build clean.
+- **Not yet verified:** the live Vercel deployment — waiting on the Turso database and demo PIN env vars.
+
 ### Phase 7 — Printing, production run and launch docs (redesign complete)
 - **80mm receipt** (`/print/receipt/[id]`): grayscale logo, shop details (SST reg. no. when SST was charged), receipt no., date, served by, customer, lines with qty × price and barber, subtotal/discount/SST, big TOTAL, payment method, cash/change or DuitNow reference, footer. Unpaid/cancelled/voided receipts carry a large **NOT PAID / CANCELLED / VOIDED** banner.
 - **A4 day report** (`/print/day/[date]`, owner only): takings, DuitNow vs cash, discounts, SST, voids, per-barber table, products, notes, "checked by" line; flags days that aren't closed yet.

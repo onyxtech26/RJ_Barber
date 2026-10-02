@@ -77,10 +77,9 @@ All data lives in **`data\`** (never commit it):
 
 | File | What |
 |---|---|
-| `data\rj-pos.db` | The database (all sales, staff, settings). |
+| `data\rj-pos.db` | The database (all sales, staff, settings and the DuitNow QR image). |
 | `data\backups\rj-pos-YYYY-MM-DD.db` | Taken each day when the POS starts. Newest 30 kept. |
 | `data\backups\rj-pos-close-YYYY-MM-DD.db` | Taken each time a day is closed. Newest 30 kept. |
-| `data\uploads\` | The DuitNow QR image. |
 
 **Copy the whole `data` folder to a USB drive or cloud folder regularly** — backups on the same PC don't
 help if the PC fails.
@@ -108,6 +107,25 @@ private, password-protected network, not a customer Wi-Fi.
 
 Replace the code (keep the `data` folder!), run `npm install` if `package.json` changed, then start
 `run.bat`. It notices the code changed, rebuilds once, and applies any database updates automatically.
+
+---
+
+## Online demo (Vercel)
+
+`rj-barber.vercel.app` is a **demo only**, with sample data — the shop's real POS runs on the counter PC.
+On Vercel the app switches to demo mode automatically (no settings needed):
+
+- Each deploy builds a demo database (`npm run build:demo-db` → `demo/rj-pos-demo.db`): the catalog,
+  RJ / Barber 1 / Barber 2, yesterday's sales left unclosed, today's sales, one pending sale, a void,
+  a discount and a sample (non-scannable) DuitNow QR.
+- Each Vercel server copies it to `/tmp` on first use, so **the demo resets itself** whenever Vercel starts
+  a fresh server (e.g. after it has been idle). Visitors may need to sign in again after a reset.
+- The sign-in screen shows the demo PINs (defined in `src/lib/demo.ts`), and every screen shows a
+  "DEMO · test data only" badge. Day-close backups are skipped.
+- To refresh the sample dates (e.g. right before showing it), redeploy.
+
+For a demo whose data persists between visits, connect a Turso database instead: Vercel → Storage →
+Turso (Singapore) → connect to the project, and set `SEED_OWNER_PIN` / `SEED_STAFF_PIN`.
 
 ---
 
@@ -150,7 +168,7 @@ changes — read `node_modules/next/dist/docs/` before changing framework-level 
 src/
   app/            routes: (pos)/ terminal, orders, close, settings · login/ · print/ · duitnow-qr/
   features/       one folder per feature: pos, orders, close, settings, catalog, auth, shell
-  server/         db (schema, migrations, scripts), auth (PIN, sessions, lockout), audit, uploads
+  server/         db (schema, migrations, scripts), auth (PIN, sessions, lockout), audit, image upload checks
   lib/            shared pure helpers: money, pricing (+ tests), dates, enums, print
   components/     shared UI (ui/ = shadcn primitives)
 scripts/          needs-build.mjs (used by run.bat)

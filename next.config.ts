@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
     },
   },
+  // Online demo: ship the pre-built demo database with every server function (see src/server/db/client.ts).
+  outputFileTracingIncludes: {
+    "/**": ["./demo/rj-pos-demo.db"],
+  },
 };
 
 export default nextConfig;

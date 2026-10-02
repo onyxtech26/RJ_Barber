@@ -29,6 +29,20 @@
       "when": 1790840335129,
       "tag": "0003_discount_share",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790856123741,
+      "tag": "0004_qr_in_db",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790856125081,
+      "tag": "0005_drop_qr_path",
+      "breakpoints": true
     }
   ]
 }

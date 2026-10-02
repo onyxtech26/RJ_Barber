@@ -1,0 +1,1 @@
+ALTER TABLE `shop_settings` DROP COLUMN `duitnow_qr_path`;

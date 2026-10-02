@@ -7,7 +7,7 @@ import { catalogItems, categories, db, shopSettings, staff } from '@/server/db';
 import { logAudit } from '@/server/audit';
 import { hashPin, PIN_PATTERN } from '@/server/auth/pin';
 import { requireOwner, revokeAllSessions } from '@/server/auth/session';
-import { deleteImage, saveImage, UploadError } from '@/server/uploads';
+import { readUploadedImage, UploadError } from '@/server/uploads';
 import { ITEM_KINDS, STAFF_ROLES } from '@/lib/enums';
 import type { ActionResult } from '@/features/pos/schemas';
 
@@ -55,32 +55,34 @@ export async function uploadDuitnowQr(formData: FormData): Promise<ActionResult<
   const file = formData.get('file');
   if (!(file instanceof File)) return { ok: false, error: 'Choose an image to upload.' };
 
-  let newPath: string;
+  let image: Awaited<ReturnType<typeof readUploadedImage>>;
   try {
-    newPath = await saveImage(file, 'duitnow-qr');
+    image = await readUploadedImage(file);
   } catch (error) {
     if (error instanceof UploadError) return { ok: false, error: error.message };
     throw error;
   }
 
-  const previous = await db.query.shopSettings.findFirst({ columns: { duitnowQrPath: true } });
   await db.transaction(async (tx) => {
-    await tx.update(shopSettings).set({ duitnowQrPath: newPath }).where(eq(shopSettings.id, 1));
-    await logAudit({ actorId: me.id, action: 'settings.updated', entity: 'shop_settings', details: { duitnowQr: 'replaced' } }, tx);
+    await tx
+      .update(shopSettings)
+      .set({ duitnowQrImage: image.bytes, duitnowQrType: image.contentType })
+      .where(eq(shopSettings.id, 1));
+    await logAudit(
+      { actorId: me.id, action: 'settings.updated', entity: 'shop_settings', details: { duitnowQr: 'replaced', bytes: image.bytes.length } },
+      tx
+    );
   });
-  await deleteImage(previous?.duitnowQrPath);
   refresh();
   return { ok: true, data: null };
 }
 
 export async function removeDuitnowQr(): Promise<ActionResult<null>> {
   const me = await requireOwner();
-  const previous = await db.query.shopSettings.findFirst({ columns: { duitnowQrPath: true } });
   await db.transaction(async (tx) => {
-    await tx.update(shopSettings).set({ duitnowQrPath: null }).where(eq(shopSettings.id, 1));
+    await tx.update(shopSettings).set({ duitnowQrImage: null, duitnowQrType: null }).where(eq(shopSettings.id, 1));
     await logAudit({ actorId: me.id, action: 'settings.updated', entity: 'shop_settings', details: { duitnowQr: 'removed' } }, tx);
   });
-  await deleteImage(previous?.duitnowQrPath);
   refresh();
   return { ok: true, data: null };
 }

@@ -14,7 +14,8 @@
     "db:backup": "tsx --env-file-if-exists=.env.local src/server/db/backup.ts",
     "db:setup": "npm run db:migrate && npm run db:seed",
     "db:studio": "drizzle-kit studio",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "build:demo-db": "tsx scripts/build-demo-db.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

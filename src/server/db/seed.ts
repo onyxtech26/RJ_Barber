@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { hashPin } from '../auth/pin';
-import { db, libsqlClient } from './client';
+import { db, IS_LOCAL_FILE, libsqlClient } from './client';
 import {
   auditLog,
   catalogItems,
@@ -47,6 +47,13 @@ async function main() {
     console.log('✓ Database already has data — skipping seed');
     libsqlClient.close();
     process.exit(0);
+  }
+
+  // On a hosted database (Vercel build) a generated PIN file would vanish with the build machine,
+  // leaving nobody able to sign in. Require the PINs to be set as environment variables instead.
+  if (!IS_LOCAL_FILE && (!process.env.SEED_OWNER_PIN || !process.env.SEED_STAFF_PIN)) {
+    console.error('Hosted database: set SEED_OWNER_PIN and SEED_STAFF_PIN (4–6 digits) before seeding.');
+    process.exit(1);
   }
 
   const randomPin = () => String(randomInt(0, 1_000_000)).padStart(6, '0');

@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { DISCOUNT_TYPES, ITEM_KINDS, ORDER_STATUSES, PAYMENT_METHODS, STAFF_ROLES } from '../../lib/enums';
 
 export * from '../../lib/enums';
@@ -40,7 +40,9 @@ export const shopSettings = sqliteTable('shop_settings', {
   address: text('address'),
   phone: text('phone'),
   receiptFooter: text('receipt_footer'),
-  duitnowQrPath: text('duitnow_qr_path'),
+  // The QR image itself (PNG/JPEG/WebP), kept in the DB so it works on Vercel and is backed up with everything else.
+  duitnowQrImage: blob('duitnow_qr_image', { mode: 'buffer' }),
+  duitnowQrType: text('duitnow_qr_type'),
   duitnowAccountName: text('duitnow_account_name'),
   sstEnabled: integer('sst_enabled', { mode: 'boolean' }).notNull().default(false),
   sstRateBps: integer('sst_rate_bps').notNull().default(800),

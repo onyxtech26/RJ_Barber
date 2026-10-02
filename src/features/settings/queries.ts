@@ -6,7 +6,8 @@ import { requireOwner } from '@/server/auth/session';
 export async function getShopSettingsForEdit() {
   await connection();
   await requireOwner();
-  const settings = await db.query.shopSettings.findFirst({ columns: { id: false, updatedAt: false } });
+  // Never send the QR image bytes to the browser here — the form only needs to know whether one exists.
+  const settings = await db.query.shopSettings.findFirst({ columns: { id: false, updatedAt: false, duitnowQrImage: false } });
   if (!settings) throw new Error('Shop settings row is missing — run npm run db:setup.');
   return settings;
 }
