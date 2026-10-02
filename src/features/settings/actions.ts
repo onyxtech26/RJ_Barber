@@ -123,6 +123,7 @@ const itemSchema = z.object({
   kind: z.enum(ITEM_KINDS),
   priceSen: z.int().min(0).max(10_000_000),
   commissionBps: bps.nullable(),
+  durationMinutes: z.int().min(5, 'Duration must be at least 5 minutes.').max(480),
   sortOrder: z.int().min(0).max(999),
   isActive: z.boolean(),
 });
@@ -157,6 +158,16 @@ const staffSchema = z.object({
   sortOrder: z.int().min(0).max(999),
   isActive: z.boolean(),
   pin: z.string().regex(PIN_PATTERN, 'PIN must be 4–6 digits.').nullish(),
+  // Index 0 = Sunday. null for a day = day off. Whole value null = default hours.
+  workingHours: z
+    .array(
+      z
+        .object({ start: z.int().min(0).max(1440), end: z.int().min(0).max(1440) })
+        .refine((d) => d.end > d.start, 'Closing time must be after opening time.')
+        .nullable()
+    )
+    .length(7)
+    .nullish(),
 });
 
 export async function saveStaff(input: z.input<typeof staffSchema>): Promise<ActionResult<null>> {

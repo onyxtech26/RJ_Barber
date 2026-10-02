@@ -47,6 +47,13 @@ export default async function DayReportPrintPage({ params }: { params: Promise<{
             {report.sstSen > 0 && <Line label="SST collected" value={formatRM(report.sstSen)} />}
             <Line label="Voided" value={formatRM(report.voided.totalSen)} note={`${report.voided.count} voided`} />
             <Line label="Cancelled (not charged)" value={String(report.cancelledCount)} />
+            {report.bookings && report.bookings.total + report.bookings.cancelled > 0 && (
+              <Line
+                label="Bookings"
+                value={String(report.bookings.total)}
+                note={`${report.bookings.completed} completed · ${report.bookings.noShow} no-show · ${report.bookings.cancelled} cancelled`}
+              />
+            )}
             {report.pending.count > 0 && (
               <Line label="Still awaiting payment" value={formatRM(report.pending.totalSen)} note={plural(report.pending.count, 'sale')} />
             )}

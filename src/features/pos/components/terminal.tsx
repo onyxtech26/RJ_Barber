@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useRef, useState, useTransition } from 'react';
-import { Lock, Scissors } from 'lucide-react';
+import { CalendarClock, Lock, Scissors, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/empty-state';
 import type { ItemKind, PaymentMethod } from '@/lib/enums';
 import { priceTicket, PricingError, type TicketTotals } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
+import { formatTimeOfDay } from '@/lib/scheduling';
+import type { BookingForSale } from '@/features/bookings/queries';
 import { createOrder } from '../actions';
 import type { OrderReceipt, PendingOrder, TerminalData } from '../queries';
 import { ApprovalDialog } from './approval-dialog';
@@ -29,14 +31,29 @@ export type TicketLine = {
 
 export type TicketDiscount = { type: 'percent' | 'amount'; value: number; reason: string };
 
-export function Terminal({ data }: { data: TerminalData }) {
+export function Terminal({ data, booking }: { data: TerminalData; booking: BookingForSale | null }) {
   const { currentStaff, catalog, barbers, owners, settings, pendingOrders, isTodayClosed } = data;
 
-  const defaultBarberId = currentStaff.isBarber ? currentStaff.id : (barbers[0]?.id ?? null);
+  const defaultBarberId = booking?.barberId ?? (currentStaff.isBarber ? currentStaff.id : (barbers[0]?.id ?? null));
   const [activeBarberId, setActiveBarberId] = useState<string | null>(defaultBarberId);
-  const [lines, setLines] = useState<TicketLine[]>([]);
-  const [customerName, setCustomerName] = useState('');
+  // Charging a booking: start the ticket with its services and barber, at today's catalog prices.
+  const [lines, setLines] = useState<TicketLine[]>(() => (booking ? ticketFromBooking(booking, catalog) : []));
+  const [customerName, setCustomerName] = useState(booking?.customerName ?? '');
+  const [bookingId, setBookingId] = useState<string | null>(booking?.id ?? null);
+
   const [discount, setDiscount] = useState<TicketDiscount | null>(null);
+
+  // A different booking was opened while the terminal stayed mounted: start its ticket.
+  // (The booking prop going back to null after a charge is ignored — the ticket was already handled.)
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(booking?.id ?? null);
+  if (booking && booking.id !== prefilledFor) {
+    setPrefilledFor(booking.id);
+    setBookingId(booking.id);
+    setLines(ticketFromBooking(booking, catalog));
+    setCustomerName(booking.customerName);
+    setDiscount(null);
+    setActiveBarberId(booking.barberId);
+  }
 
   const [discountOpen, setDiscountOpen] = useState(false);
   const [approvalOpen, setApprovalOpen] = useState(false);
@@ -57,6 +74,16 @@ export function Terminal({ data }: { data: TerminalData }) {
   const updateLines = editTicket(setLines);
   const updateDiscount = editTicket(setDiscount);
   const updateCustomerName = editTicket(setCustomerName);
+  // Drop ?booking= from the address without a navigation: a navigation would remount the terminal
+  // (it's keyed by booking) and lose the payment dialog that opens right after charging.
+  const forgetBooking = () => {
+    setBookingId(null);
+    window.history.replaceState(null, '', '/');
+  };
+  const detachBooking = () => {
+    orderIdRef.current = null;
+    forgetBooking();
+  };
 
   const { totals, pricingError } = useMemo((): { totals: TicketTotals | null; pricingError: string | null } => {
     try {
@@ -100,6 +127,7 @@ export function Terminal({ data }: { data: TerminalData }) {
     setLines([]);
     setDiscount(null);
     setCustomerName('');
+    if (bookingId) forgetBooking();
   };
 
   const charge = (method: PaymentMethod, approval?: { ownerId: string; pin: string }) => {
@@ -123,6 +151,7 @@ export function Terminal({ data }: { data: TerminalData }) {
           lines: lines.map((l) => ({ catalogItemId: l.catalogItemId, quantity: l.quantity, barberId: l.barberId })),
           discount,
           approval: approval ?? null,
+          bookingId,
         });
 
         if (!result.ok) {
@@ -158,6 +187,23 @@ export function Terminal({ data }: { data: TerminalData }) {
   return (
     <div className="grid flex-1 grid-cols-1 lg:h-[calc(100dvh-4rem)] lg:flex-none lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-1 lg:overflow-hidden">
       <div className="flex min-h-0 flex-col">
+        {booking && bookingId && (
+          <div className="flex items-center gap-2 border-b bg-accent px-4 py-2.5 text-sm">
+            <CalendarClock className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">
+              Charging the booking for <span className="font-semibold">{booking.customerName}</span> at{' '}
+              {formatTimeOfDay(booking.startMinutes)}. Paying marks it completed.
+            </span>
+            <button
+              type="button"
+              onClick={detachBooking}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-background/60"
+              aria-label="Don’t link this sale to the booking"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
         {isTodayClosed && (
           <div className="flex items-center gap-2 border-b bg-warning-soft px-4 py-2.5 text-sm font-medium text-warning">
             <Lock className="size-4 shrink-0" />
@@ -254,4 +300,24 @@ export function Terminal({ data }: { data: TerminalData }) {
       <ReceiptDialog receipt={receipt} onDone={() => setReceipt(null)} />
     </div>
   );
+}
+
+function ticketFromBooking(booking: BookingForSale, catalog: TerminalData['catalog']): TicketLine[] {
+  const items = new Map(catalog.flatMap((c) => c.items).map((i) => [i.id, i]));
+  return booking.catalogItemIds.flatMap((id) => {
+    const item = items.get(id);
+    return item
+      ? [
+          {
+            key: crypto.randomUUID(),
+            catalogItemId: item.id,
+            name: item.name,
+            kind: item.kind,
+            unitPriceSen: item.priceSen,
+            quantity: 1,
+            barberId: booking.barberId,
+          },
+        ]
+      : [];
+  });
 }

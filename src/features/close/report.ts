@@ -1,6 +1,6 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
-import { db, orders, type Db } from '@/server/db';
+import { bookings, db, orders, type Db } from '@/server/db';
 
 type Executor = Pick<Db, 'query'>;
 
@@ -16,6 +16,8 @@ export type DayReport = {
   pending: { count: number; totalSen: number };
   barbers: { barberId: string | null; name: string; services: number; salesSen: number; commissionSen: number }[];
   products: { name: string; quantity: number; salesSen: number }[];
+  /** Missing on snapshots saved before bookings existed. */
+  bookings?: { total: number; completed: number; noShow: number; cancelled: number; open: number };
 };
 
 /**
@@ -98,6 +100,18 @@ export async function buildDayReport(businessDate: string, executor: Executor = 
       }
     }
   }
+
+  const dayBookings = await executor.query.bookings.findMany({
+    where: eq(bookings.businessDate, businessDate),
+    columns: { status: true },
+  });
+  report.bookings = {
+    total: dayBookings.filter((b) => b.status !== 'cancelled').length,
+    completed: dayBookings.filter((b) => b.status === 'completed').length,
+    noShow: dayBookings.filter((b) => b.status === 'no_show').length,
+    cancelled: dayBookings.filter((b) => b.status === 'cancelled').length,
+    open: dayBookings.filter((b) => b.status === 'booked' || b.status === 'checked_in').length,
+  };
 
   report.barbers = [...barbers.values()].sort((a, b) => b.salesSen - a.salesSen);
   report.products = [...products.values()].sort((a, b) => b.salesSen - a.salesSen);

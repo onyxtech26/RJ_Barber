@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarCheck, LogOut, ReceiptText, Settings, ShoppingCart } from 'lucide-react';
+import { CalendarCheck, CalendarClock, LogOut, ReceiptText, Settings, ShoppingCart } from 'lucide-react';
 import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { signOut } from '@/features/auth/actions';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Terminal', icon: ShoppingCart, ownerOnly: false },
+  { href: '/bookings', label: 'Bookings', icon: CalendarClock, ownerOnly: false },
   { href: '/orders', label: 'Orders', icon: ReceiptText, ownerOnly: false },
   { href: '/close', label: 'Day Close', icon: CalendarCheck, ownerOnly: true },
   { href: '/settings', label: 'Settings', icon: Settings, ownerOnly: true },

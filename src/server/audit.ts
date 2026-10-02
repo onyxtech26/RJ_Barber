@@ -20,7 +20,10 @@ export type AuditAction =
   | 'catalog.updated'
   | 'staff.created'
   | 'staff.updated'
-  | 'staff.pin_reset';
+  | 'staff.pin_reset'
+  | 'booking.created'
+  | 'booking.updated'
+  | 'booking.status_changed';
 
 /** Append-only record of who did what. Pass a transaction to log atomically with the change. */
 export async function logAudit(

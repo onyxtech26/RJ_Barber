@@ -43,6 +43,13 @@
       "when": 1790856125081,
       "tag": "0005_drop_qr_path",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790919473573,
+      "tag": "0006_bookings",
+      "breakpoints": true
     }
   ]
 }

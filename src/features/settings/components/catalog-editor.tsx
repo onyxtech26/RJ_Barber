@@ -78,6 +78,7 @@ export function CatalogEditor({ catalog }: { catalog: CatalogForEdit }) {
                       {!item.isActive && <HiddenTag />}
                     </span>
                     <span className="flex shrink-0 items-center gap-3 text-sm">
+                      {item.kind === 'service' && <span className="text-muted-foreground">{item.durationMinutes} min</span>}
                       {item.commissionBps !== null && (
                         <span className="text-muted-foreground">{formatPercent(item.commissionBps)}% commission</span>
                       )}
@@ -170,13 +171,16 @@ function ItemDialog({ draft, categories, onClose }: { draft: ItemDraft; categori
   const [kind, setKind] = useState<ItemKind>(item?.kind ?? 'service');
   const [price, setPrice] = useState(item ? (item.priceSen / 100).toFixed(2) : '');
   const [commission, setCommission] = useState(item?.commissionBps != null ? formatPercent(item.commissionBps) : '');
+  const [duration, setDuration] = useState(String(item?.durationMinutes ?? 30));
   const [isActive, setIsActive] = useState(item?.isActive ?? true);
   const [isPending, startTransition] = useTransition();
 
   const priceSen = parseRM(price);
   const commissionBps = commission.trim() === '' ? null : parsePercent(commission);
   const commissionInvalid = commission.trim() !== '' && commissionBps === null;
-  const canSave = name.trim() !== '' && priceSen !== null && !commissionInvalid && !isPending;
+  const durationMinutes = /^\d{1,3}$/.test(duration.trim()) ? Number(duration) : null;
+  const durationInvalid = kind === 'service' && (durationMinutes === null || durationMinutes < 5 || durationMinutes > 480);
+  const canSave = name.trim() !== '' && priceSen !== null && !commissionInvalid && !durationInvalid && !isPending;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -194,6 +198,7 @@ function ItemDialog({ draft, categories, onClose }: { draft: ItemDraft; categori
                 kind,
                 priceSen: priceSen!,
                 commissionBps,
+                durationMinutes: kind === 'service' ? durationMinutes! : (item?.durationMinutes ?? 30),
                 isActive,
                 sortOrder: item?.sortOrder ?? categories.find((c) => c.id === categoryId)?.items.length ?? 0,
               });
@@ -243,6 +248,18 @@ function ItemDialog({ draft, categories, onClose }: { draft: ItemDraft; categori
               </select>
             </Field>
           </div>
+
+          {kind === 'service' && (
+            <Field label="Takes (minutes) — used for bookings" htmlFor="item-duration" error={durationInvalid ? 'Between 5 and 480 minutes' : null}>
+              <Input
+                id="item-duration"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                inputMode="numeric"
+                className="max-w-32"
+              />
+            </Field>
+          )}
 
           <Field
             label="Commission override (%)"

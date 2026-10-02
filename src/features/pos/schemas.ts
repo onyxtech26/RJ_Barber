@@ -34,6 +34,8 @@ export const createOrderSchema = z.object({
     })
     .nullish(),
   approval: z.object({ ownerId: z.string().min(1), pin: z.string().regex(/^\d{4,6}$/) }).nullish(),
+  /** Set when charging a booking from the bookings page — links the sale to it. */
+  bookingId: z.string().min(1).max(64).nullish(),
 });
 export type CreateOrderInput = z.input<typeof createOrderSchema>;
 
@@ -46,4 +48,4 @@ export type ConfirmPaymentInput = z.input<typeof confirmPaymentSchema>;
 
 export type ActionResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: string; code?: 'approval_required' | 'stale' };
+  | { ok: false; error: string; code?: 'approval_required' | 'stale' | 'outside_hours' };

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { toBusinessDate } from '../../lib/business-date';
 import { priceTicket, type DiscountInput } from '../../lib/pricing';
 import { db, libsqlClient } from './client';
-import { catalogItems, orderItems, orders, receiptCounters, shopSettings, staff } from './schema';
+import { bookingItems, bookings, catalogItems, orderItems, orders, receiptCounters, shopSettings, staff } from './schema';
 
 /*
  * Adds realistic sample activity to a freshly seeded DEMO database (never the shop's real one):
@@ -38,6 +38,34 @@ const SAMPLES: Sample[] = [
   { daysAgo: 0, time: [10, 5], method: 'duitnow', lines: [{ item: 'Haircut + Beard Trim', barber: 'Barber 1' }], customer: 'Kumar', ref: '3360' },
   { daysAgo: 0, time: [10, 40], method: 'cash', lines: [{ item: 'Skin Fade', barber: 'Barber 2' }, { item: 'Beard Oil', barber: 'Barber 2' }], cashReceivedRM: 100 },
   { daysAgo: 0, time: [11, 15], method: 'duitnow', lines: [{ item: 'Hot Towel Shave', barber: 'RJ' }], customer: 'Wei Jie', status: 'awaiting_payment' },
+];
+
+type SampleBooking = {
+  daysAgo: number; // negative = in the future
+  time: [number, number];
+  barber: string;
+  customer: string;
+  phone?: string;
+  services: string[];
+  status?: 'booked' | 'checked_in' | 'completed' | 'no_show' | 'cancelled';
+  notes?: string;
+};
+
+const SAMPLE_BOOKINGS: SampleBooking[] = [
+  // Yesterday
+  { daysAgo: 1, time: [10, 45], barber: 'Barber 2', customer: 'Hafiz', phone: '012-555 0101', services: ['Skin Fade', 'Beard Trim'], status: 'completed' },
+  { daysAgo: 1, time: [14, 0], barber: 'Barber 1', customer: 'Jason', phone: '016-555 0144', services: ['Haircut'], status: 'no_show' },
+  // Today
+  { daysAgo: 0, time: [11, 0], barber: 'Barber 2', customer: 'Farid', phone: '013-555 0120', services: ['Haircut'], status: 'no_show' },
+  { daysAgo: 0, time: [12, 30], barber: 'Barber 1', customer: 'Ravi', phone: '017-555 0188', services: ['Haircut + Beard Trim'] },
+  { daysAgo: 0, time: [14, 0], barber: 'Barber 2', customer: 'Amir', phone: '019-555 0133', services: ['Skin Fade', 'Beard Trim'], notes: 'Prefers a low fade' },
+  { daysAgo: 0, time: [15, 30], barber: 'RJ', customer: 'Daniel', phone: '011-555 0190', services: ['Haircut + Hot Towel Shave'] },
+  { daysAgo: 0, time: [16, 0], barber: 'Barber 1', customer: 'Mrs. Tan (2 kids)', phone: '012-555 0177', services: ['Kids Haircut (under 12)', 'Kids Haircut (under 12)'] },
+  { daysAgo: 0, time: [18, 15], barber: 'Barber 2', customer: 'Kumar', services: ['Full Grooming (Cut, Shave, Wash)'] },
+  // Tomorrow
+  { daysAgo: -1, time: [10, 0], barber: 'RJ', customer: 'Arif', phone: '014-555 0102', services: ['Skin Fade'] },
+  { daysAgo: -1, time: [11, 0], barber: 'Barber 1', customer: 'Wei Jie', services: ['Haircut', 'Hot Towel Shave'] },
+  { daysAgo: -1, time: [13, 30], barber: 'Barber 2', customer: 'Hafiz', phone: '012-555 0101', services: ['Beard Sculpt & Line-up'] },
 ];
 
 /** A Date for a wall-clock time in Malaysia (UTC+8, no daylight saving). */
@@ -163,13 +191,53 @@ async function main() {
     );
   }
 
+  for (const sample of SAMPLE_BOOKINGS) {
+    const businessDate = shiftDate(today, -sample.daysAgo);
+    const barber = people.get(sample.barber);
+    if (!barber) throw new Error(`Sample barber missing: ${sample.barber}`);
+    const chosen = sample.services.map((name) => {
+      const item = items.get(name);
+      if (!item) throw new Error(`Sample service not in catalog: ${name}`);
+      return item;
+    });
+    const startAt = shopTime(businessDate, sample.time);
+    const endAt = new Date(startAt.getTime() + chosen.reduce((sum, i) => sum + i.durationMinutes, 0) * 60_000);
+    const status = sample.status ?? 'booked';
+    const [booking] = await db
+      .insert(bookings)
+      .values({
+        businessDate,
+        startAt,
+        endAt,
+        barberId: barber.id,
+        customerName: sample.customer,
+        customerPhone: sample.phone ?? null,
+        notes: sample.notes ?? null,
+        status,
+        createdBy: owner.id,
+        createdAt: new Date(startAt.getTime() - 2 * 24 * 60 * 60_000),
+        statusChangedBy: status === 'booked' ? null : barber.id,
+        statusChangedAt: status === 'booked' ? null : startAt,
+      })
+      .returning({ id: bookings.id });
+    await db.insert(bookingItems).values(
+      chosen.map((item, position) => ({
+        bookingId: booking.id,
+        catalogItemId: item.id,
+        position,
+        name: item.name,
+        durationMinutes: item.durationMinutes,
+      }))
+    );
+  }
+
   for (const [businessDate, lastSeq] of counters) {
     await db.insert(receiptCounters).values({ businessDate, lastSeq });
   }
 
   // Ship the demo as one self-contained file (no -wal/-shm side files).
   await libsqlClient.execute('PRAGMA journal_mode = DELETE');
-  console.log(`✓ Demo data: ${SAMPLES.length} sample sales over ${counters.size} days, sample QR`);
+  console.log(`✓ Demo data: ${SAMPLES.length} sample sales, ${SAMPLE_BOOKINGS.length} bookings, sample QR`);
   libsqlClient.close();
 }
 

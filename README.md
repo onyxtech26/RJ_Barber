@@ -13,10 +13,11 @@ confirm each payment in the POS. It runs on the shop's counter PC — no interne
 | Area | Who | What |
 |---|---|---|
 | **Terminal** | Everyone | Build a sale (barber per line, products, discounts, optional customer name) → charge by **DuitNow** (shows the shop QR) or **Cash** (shows change) → confirm payment → print receipt. Unconfirmed sales wait in the **Pending** tray. |
+| **Bookings** | Everyone | Day calendar with a column per barber. Book a customer (one or more services; the length is their durations added up), reschedule, check in, mark no-show or cancel. **Start sale** opens the Terminal with the booking already on the ticket; paying marks it completed. Double-booking a barber is refused; bookings outside a barber's hours need a "Book anyway". |
 | **Orders** | Everyone | Any day's sales, filters, search by receipt no./name/phone, sale history, reprint. |
 | **Void a sale** | Owner | Reverse a paid sale with a reason (refund the customer separately). |
 | **Day Close** | Owner | DuitNow total (check against bank), cash in hand, per-barber sales and commission. Closing freezes the day, makes a backup, and stops further sales/voids for that date. Can be reopened. |
-| **Settings** | Owner | Shop details, SST, discount limit, DuitNow QR, services & prices, staff & PINs. |
+| **Settings** | Owner | Shop details, SST, discount limit, DuitNow QR, services, prices & durations, staff, PINs & barbers' working hours. |
 
 Big discounts (above the limit in Settings) need the owner's PIN. Five wrong PINs lock that person
 out for 5 minutes. Everything important is recorded in an audit log.
@@ -32,7 +33,9 @@ out for 5 minutes. Everything important is recorded in an audit log.
    - DuitNow: turn the screen to the customer, wait for the bank notification, tap **Payment received**.
    - Cash: enter the amount handed over, give the change shown, tap **Cash received**.
    - Customer not ready? Tap **Leave pending** and finish it later from the **Pending** tray.
-4. **End of day (owner):** **Day Close** → check DuitNow against the bank app and count the cash →
+4. **Bookings:** when a customer calls or messages, open **Bookings**, tap the barber's free slot and fill
+   in name, phone and services. When they arrive, open the booking → **Start sale**.
+5. **End of day (owner):** **Day Close** → check DuitNow against the bank app and count the cash →
    **Close day** → **Print report** if you want a paper copy.
 
 ---

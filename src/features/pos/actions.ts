@@ -1,9 +1,9 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { db, dayCloses, orderItems, orders, receiptCounters, staff, catalogItems, type PaymentMethod } from '@/server/db';
+import { bookings, db, dayCloses, orderItems, orders, receiptCounters, staff, catalogItems, type PaymentMethod } from '@/server/db';
 import { logAudit } from '@/server/audit';
 import { attemptPin } from '@/server/auth/pin-attempt';
 import { requireStaff } from '@/server/auth/session';
@@ -168,6 +168,19 @@ export async function createOrder(input: CreateOrderInput): Promise<ActionResult
         }))
       );
 
+      // Charging a booking: link the sale to it. Must come after the order insert (order_id references it).
+      // Refuse if the booking was cancelled or already charged meanwhile — the whole sale rolls back.
+      if (ticket.bookingId) {
+        const linked = await tx
+          .update(bookings)
+          .set({ orderId: ticket.id, status: 'checked_in', statusChangedBy: me.id, statusChangedAt: new Date() })
+          .where(
+            and(eq(bookings.id, ticket.bookingId), inArray(bookings.status, ['booked', 'checked_in']), isNull(bookings.orderId))
+          )
+          .returning({ id: bookings.id });
+        if (linked.length === 0) throw new BookingLinkError();
+      }
+
       await logAudit(
         { actorId: me.id, action: 'order.created', entity: 'order', entityId: ticket.id, details: { receiptNo, totalSen: totals.totalSen } },
         tx
@@ -187,6 +200,9 @@ export async function createOrder(input: CreateOrderInput): Promise<ActionResult
     });
   } catch (error) {
     if (error instanceof DayClosedError) return { ok: false, error: DAY_CLOSED_MESSAGE };
+    if (error instanceof BookingLinkError) {
+      return { ok: false, code: 'stale', error: 'That booking was cancelled or already charged. Remove it from the ticket.' };
+    }
     throw error;
   }
 
@@ -235,6 +251,11 @@ export async function confirmPayment(input: ConfirmPaymentInput): Promise<Action
         { actorId: me.id, action: 'order.paid', entity: 'order', entityId: orderId, details: { method: order.paymentMethod } },
         tx
       );
+      // A booking charged through this sale is now done.
+      await tx
+        .update(bookings)
+        .set({ status: 'completed', statusChangedBy: me.id, statusChangedAt: new Date() })
+        .where(eq(bookings.orderId, orderId));
     }
     return rows.length === 1;
   });
@@ -258,6 +279,8 @@ export async function cancelPendingOrder(rawOrderId: string): Promise<ActionResu
       .returning({ id: orders.id });
     if (result.length === 1) {
       await logAudit({ actorId: me.id, action: 'order.cancelled', entity: 'order', entityId: orderId }, tx);
+      // Free the booking so it can be charged again (it stays checked in).
+      await tx.update(bookings).set({ orderId: null }).where(eq(bookings.orderId, orderId));
     }
     return result;
   });
@@ -298,6 +321,7 @@ export async function changePaymentMethod(rawOrderId: string, rawMethod: Payment
 
 const DAY_CLOSED_MESSAGE = 'Today has been closed by the owner. Ask them to reopen it to take more sales.';
 class DayClosedError extends Error {}
+class BookingLinkError extends Error {}
 
 async function isDayClosed(businessDate: string, executor: Pick<typeof db, 'query'> = db) {
   const close = await executor.query.dayCloses.findFirst({

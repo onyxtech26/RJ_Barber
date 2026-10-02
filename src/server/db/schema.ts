@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
 import { blob, check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { DISCOUNT_TYPES, ITEM_KINDS, ORDER_STATUSES, PAYMENT_METHODS, STAFF_ROLES } from '../../lib/enums';
+import { BOOKING_STATUSES, DISCOUNT_TYPES, ITEM_KINDS, ORDER_STATUSES, PAYMENT_METHODS, STAFF_ROLES } from '../../lib/enums';
+import type { WeeklyHours } from '../../lib/scheduling';
 
 export * from '../../lib/enums';
 
@@ -65,6 +66,8 @@ export const staff = sqliteTable('staff', {
   commissionBps: integer('commission_bps').notNull().default(0),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
+  // Weekly working hours for bookings (index 0 = Sunday). null = the default 10am–9pm every day.
+  workingHours: text('working_hours', { mode: 'json' }).$type<WeeklyHours>(),
   failedPinAttempts: integer('failed_pin_attempts').notNull().default(0),
   lockedUntil: integer('locked_until', { mode: 'timestamp_ms' }),
   createdAt: createdAt(),
@@ -110,6 +113,8 @@ export const catalogItems = sqliteTable(
     priceSen: integer('price_sen').notNull(),
     // null = use the barber's rate (services) or 0% (products).
     commissionBps: integer('commission_bps'),
+    // How long a booking for this service takes. Ignored for products.
+    durationMinutes: integer('duration_minutes').notNull().default(30),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: createdAt(),
@@ -222,6 +227,58 @@ export const orderItems = sqliteTable(
   ]
 );
 
+// Appointments entered by staff. One barber, one or more services, a fixed time slot.
+// Linked to the sale once the customer is charged (order_id), and completed when that sale is paid.
+export const bookings = sqliteTable(
+  'bookings',
+  {
+    id: id(),
+    businessDate: text('business_date').notNull(),
+    startAt: integer('start_at', { mode: 'timestamp_ms' }).notNull(),
+    endAt: integer('end_at', { mode: 'timestamp_ms' }).notNull(),
+    barberId: text('barber_id')
+      .notNull()
+      .references(() => staff.id),
+    customerName: text('customer_name').notNull(),
+    customerPhone: text('customer_phone'),
+    notes: text('notes'),
+    status: text('status', { enum: BOOKING_STATUSES }).notNull().default('booked'),
+    orderId: text('order_id').references(() => orders.id, { onDelete: 'set null' }),
+    createdBy: text('created_by')
+      .notNull()
+      .references(() => staff.id),
+    createdAt: createdAt(),
+    statusChangedBy: text('status_changed_by').references(() => staff.id),
+    statusChangedAt: integer('status_changed_at', { mode: 'timestamp_ms' }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index('bookings_date_idx').on(t.businessDate),
+    index('bookings_barber_start_idx').on(t.barberId, t.startAt),
+    index('bookings_order_idx').on(t.orderId),
+    check('bookings_status_valid', inList('status', BOOKING_STATUSES)),
+    check('bookings_time_valid', sql`${t.endAt} > ${t.startAt}`),
+  ]
+);
+
+export const bookingItems = sqliteTable(
+  'booking_items',
+  {
+    id: id(),
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id, { onDelete: 'cascade' }),
+    catalogItemId: text('catalog_item_id').references(() => catalogItems.id, { onDelete: 'set null' }),
+    position: integer('position').notNull().default(0),
+    name: text('name').notNull(),
+    durationMinutes: integer('duration_minutes').notNull(),
+  },
+  (t) => [
+    index('booking_items_booking_idx').on(t.bookingId),
+    check('booking_items_duration_valid', sql`${t.durationMinutes} > 0`),
+  ]
+);
+
 // Gap-free-per-day receipt numbering: RJ-20261001-001.
 export const receiptCounters = sqliteTable('receipt_counters', {
   businessDate: text('business_date').primaryKey(),
@@ -275,6 +332,18 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   catalogItem: one(catalogItems, { fields: [orderItems.catalogItemId], references: [catalogItems.id] }),
 }));
 
+export const bookingsRelations = relations(bookings, ({ one, many }) => ({
+  items: many(bookingItems),
+  barber: one(staff, { fields: [bookings.barberId], references: [staff.id], relationName: 'bookingBarber' }),
+  createdByStaff: one(staff, { fields: [bookings.createdBy], references: [staff.id], relationName: 'bookingCreatedBy' }),
+  order: one(orders, { fields: [bookings.orderId], references: [orders.id] }),
+}));
+
+export const bookingItemsRelations = relations(bookingItems, ({ one }) => ({
+  booking: one(bookings, { fields: [bookingItems.bookingId], references: [bookings.id] }),
+  catalogItem: one(catalogItems, { fields: [bookingItems.catalogItemId], references: [catalogItems.id] }),
+}));
+
 export const dayClosesRelations = relations(dayCloses, ({ one, many }) => ({
   closedByStaff: one(staff, { fields: [dayCloses.closedBy], references: [staff.id] }),
   orders: many(orders),
@@ -293,4 +362,6 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type NewOrderItem = typeof orderItems.$inferInsert;
 export type DayClose = typeof dayCloses.$inferSelect;
 export type AuditEntry = typeof auditLog.$inferSelect;
+export type Booking = typeof bookings.$inferSelect;
+export type BookingItem = typeof bookingItems.$inferSelect;
 

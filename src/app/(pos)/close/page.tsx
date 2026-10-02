@@ -129,6 +129,28 @@ function ReportView({ report }: { report: DayReport }) {
         />
       </div>
 
+      {report.bookings && report.bookings.total + report.bookings.cancelled > 0 && (
+        <div className="flex flex-wrap gap-x-6 gap-y-1 rounded-xl border bg-card p-3 text-sm">
+          <span>
+            Bookings: <span className="font-semibold tabular-nums">{report.bookings.total}</span>
+          </span>
+          <span>
+            Completed: <span className="font-semibold tabular-nums">{report.bookings.completed}</span>
+          </span>
+          <span className={report.bookings.noShow > 0 ? 'text-destructive' : undefined}>
+            No-shows: <span className="font-semibold tabular-nums">{report.bookings.noShow}</span>
+          </span>
+          <span>
+            Cancelled: <span className="font-semibold tabular-nums">{report.bookings.cancelled}</span>
+          </span>
+          {report.bookings.open > 0 && (
+            <span className="text-warning">
+              Not yet seen: <span className="font-semibold tabular-nums">{report.bookings.open}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {(report.discountSen > 0 || report.sstSen > 0) && (
         <div className="flex flex-wrap gap-x-6 gap-y-1 rounded-xl border bg-card p-3 text-sm">
           <span>

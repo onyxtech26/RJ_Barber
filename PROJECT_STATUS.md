@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-**All 7 phases of the POS redesign are done**, and `rj-barber.vercel.app` is a self-resetting **demo** (pre-built demo DB copied to /tmp, sample data, PIN hints, demo badge) for showing the barber. Next: show the demo, then the go-live checklist below.
+**All 7 phases of the POS redesign are done**, plus a **staff booking book** (Phase 8: calendar per barber, durations, working hours, double-booking guard, Start sale → POS). `rj-barber.vercel.app` is a self-resetting **demo**. Next: push Phase 8 to the demo, show the barber, then the go-live checklist below.
 
 ---
 
@@ -17,6 +17,7 @@
 - [x] Set up cross-session project tracking (this system)
 - [x] Phase 0 — tagged old system `pre-pos-redesign`, read Next 16 docs (middleware → `proxy.ts`)
 - [x] Phase 1 — removed booking/WhatsApp/queue/till/Supabase/Redis; light theme from logo; POS shell + placeholder routes
+- [x] Phase 8 — Bookings (staff-only): `bookings` + `booking_items` tables (migration 0006), service durations, per-barber weekly hours, day calendar with per-barber columns, create/reschedule/check-in/no-show/cancel, overlap check inside the write transaction, outside-hours override, Start sale prefills the Terminal and links the sale (paid → booking completed, cancelled sale → booking released), Day Close booking stats, demo sample bookings, 12 scheduling unit tests
 - [x] Phase 7 — 80mm receipt print view + A4 day report (`/print/...`, printed via hidden iframe, Print buttons on receipt dialog / sale detail / Day Close); session cookie `secure` only over real HTTPS; production `run.bat` (build only when source changed via `scripts/needs-build.mjs`, `next start` bound to 127.0.0.1, opens Edge app window); `.gitattributes` keeps `.bat` CRLF; README rewritten for owner/staff/maintainer
 - [x] Phase 6 — Day Close (DuitNow vs cash, discounts/SST, per-barber net sales + commission, products sold; blocked while sales are pending; freezes snapshot, links orders, blocks new sales and voids for that date, backup on close; owner reopen with reason; unclosed-days reminder) + Settings (shop details, SST with reg no., discount approval limit, DuitNow account name + QR upload served at `/duitnow-qr`; catalog editor with hide-not-delete; staff add/edit/deactivate, last-owner guard, PIN reset that clears lockout and revokes sessions)
 - [x] Phase 5 — Orders: URL-based filters (date, status, method, search), day summary (takings / DuitNow / cash / not counted), sale detail with history timeline, owner-only commission view, owner void (paid only, reason required, blocked once the day is closed), audit `order.voided`
@@ -63,6 +64,7 @@
 - **Two deployments:** shop PC = local SQLite file via `run.bat` (the real POS); Vercel `rj-barber.vercel.app` = **self-resetting demo**: `vercel.json` runs `build:demo-db` (migrate + seed with `DEMO_PINS` + `demo-data.ts` samples → `demo/rj-pos-demo.db`), `outputFileTracingIncludes` bundles it, and `client.ts` copies it to `/tmp` on first use when `VERCEL=1` and no DB URL is set. `IS_DEMO` (`src/lib/demo.ts`) = `VERCEL=1` or `DEMO_MODE=1` → badge, PIN hints on sign-in, no close backups. Functions pinned to `sin1`. Turso (`TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) still supported for a persistent demo; the seed refuses a hosted DB without `SEED_*_PIN`. Empty env vars count as unset (`||`). **After any local `VERCEL=1` build, rebuild normally** so `run.bat` doesn't serve demo-baked static pages.
 - **QR image** lives in `shop_settings.duitnow_qr_image` (blob) + `duitnow_qr_type` — no files on disk anywhere now. It's loaded via the `loadDuitnowQr` Server Action (data URL), **not** a route handler: on Vercel, route handlers are a separate function with their own demo DB copy and can't see sessions. Avoid adding route handlers that need DB/session state while the demo uses `/tmp`.
 - **drizzle-kit can't answer its rename prompt in a non-interactive shell:** split "drop column + add column" into two migrations (add first, then drop), as done for 0004/0005.
+- **Bookings scope (decided 2026-10-02):** staff-only (no public booking page; the POS isn't reachable from outside), no walk-in queue, no reminders (phone stored only). Times: `src/lib/scheduling.ts` (shop minutes, UTC+8, half-open overlap). A booking occupies its barber while `booked`/`checked_in`. `bookings.order_id` links the sale: set inside `createOrder` **after** the order insert; `confirmPayment` → `completed`; `cancelPendingOrder` → unlinked. The Terminal is **not keyed by booking** (a remount after charging lost the payment dialog); it re-prefills when a different booking id arrives.
 - **Testing tip:** the browser tool's `type` action doesn't fire `keydown`, so the PIN pad ignores it — use `key` presses or click the on-screen keypad.
 
 ---
@@ -76,4 +78,5 @@
 - **2026-10-01** — Phase 6: Day Close + owner Settings (shop/SST/QR, catalog, staff/PINs).
 - **2026-10-01** — Phase 7: receipt + day-report printing, production run.bat, cookie/LAN hardening, README. Redesign plan complete.
 - **2026-10-01** — Vercel demo prep: Turso support, QR stored in DB, build-time migrate/seed, demo badge, sin1 region. Diagnosed the live 500 (`mkdir 'data'` on read-only Vercel disk).
+- **2026-10-02** — Phase 8: staff booking book (calendar, durations, working hours, Start sale → POS), tested end to end; two bugs fixed during testing.
 - **2026-10-02** — Self-resetting Vercel demo (no external account): bundled demo DB → /tmp, sample sales, PIN hints. Rehearsed with `VERCEL=1` locally; pushed.

@@ -10,6 +10,13 @@ import { Switch } from '@/components/ui/switch';
 import type { StaffRole } from '@/lib/enums';
 import { formatPercent, parsePercent } from '@/lib/money';
 import { cn } from '@/lib/utils';
+import {
+  DEFAULT_WEEKLY_HOURS,
+  parseTimeOfDay,
+  toTimeInput,
+  WEEKDAY_NAMES,
+  type WeeklyHours,
+} from '@/lib/scheduling';
 import type { CurrentStaff } from '@/server/auth/session';
 import { resetStaffPin, saveStaff } from '../actions';
 import type { StaffForEdit } from '../queries';
@@ -93,13 +100,18 @@ function StaffDialog({
   const [isBarber, setIsBarber] = useState(member?.isBarber ?? true);
   const [commission, setCommission] = useState(member ? formatPercent(member.commissionBps) : '50');
   const [isActive, setIsActive] = useState(member?.isActive ?? true);
+  const [hours, setHours] = useState<HoursDraft>(() => toDraft(member?.workingHours ?? DEFAULT_WEEKLY_HOURS));
+  const parsedHours = fromDraft(hours);
   const [pin, setPin] = useState('');
   const [isPending, startTransition] = useTransition();
 
   const commissionBps = parsePercent(commission);
   const needsPin = member === null;
   const canSave =
-    name.trim() !== '' && (!isBarber || commissionBps !== null) && (!needsPin || PIN_PATTERN.test(pin)) && !isPending;
+    name.trim() !== '' &&
+    (!isBarber || (commissionBps !== null && parsedHours !== null)) &&
+    (!needsPin || PIN_PATTERN.test(pin)) &&
+    !isPending;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -119,6 +131,7 @@ function StaffDialog({
                 isActive,
                 sortOrder: member?.sortOrder ?? nextSortOrder,
                 pin: needsPin ? pin : null,
+                workingHours: isBarber ? parsedHours : (member?.workingHours ?? null),
               });
               if (!result.ok) return void toast.error(result.error);
               toast.success(`${name.trim()} saved`);
@@ -172,6 +185,51 @@ function StaffDialog({
                 className="max-w-32"
               />
             </Field>
+          )}
+
+          {isBarber && (
+            <div className="grid gap-1.5">
+              <span className="text-sm font-medium">Working hours (for bookings)</span>
+              <div className="divide-y rounded-lg border">
+                {hours.map((day, weekday) => (
+                  <div key={weekday} className="flex items-center gap-2 px-2 py-1.5">
+                    <label className="flex w-32 items-center gap-2 text-sm">
+                      <Switch
+                        size="sm"
+                        aria-label={`${WEEKDAY_NAMES[weekday]} working`}
+                        checked={day.working}
+                        onCheckedChange={(working) => setHours((h) => h.map((d, i) => (i === weekday ? { ...d, working } : d)))}
+                      />
+                      {WEEKDAY_NAMES[weekday].slice(0, 3)}
+                    </label>
+                    {day.working ? (
+                      <>
+                        <Input
+                          type="time"
+                          step={900}
+                          value={day.start}
+                          onChange={(e) => setHours((h) => h.map((d, i) => (i === weekday ? { ...d, start: e.target.value } : d)))}
+                          className="h-8 w-28"
+                          aria-label={`${WEEKDAY_NAMES[weekday]} start`}
+                        />
+                        <span className="text-muted-foreground">–</span>
+                        <Input
+                          type="time"
+                          step={900}
+                          value={day.end}
+                          onChange={(e) => setHours((h) => h.map((d, i) => (i === weekday ? { ...d, end: e.target.value } : d)))}
+                          className="h-8 w-28"
+                          aria-label={`${WEEKDAY_NAMES[weekday]} end`}
+                        />
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Day off</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {parsedHours === null && <p className="text-sm text-destructive">Each working day needs a closing time after its opening time.</p>}
+            </div>
           )}
 
           {needsPin && (
@@ -267,4 +325,31 @@ function PinDialog({ member, onClose }: { member: StaffForEdit; onClose: () => v
       </DialogContent>
     </Dialog>
   );
+}
+
+// Editable form of the weekly hours: strings for the time inputs, plus a working toggle per day.
+type HoursDraft = { working: boolean; start: string; end: string }[];
+
+function toDraft(hours: WeeklyHours): HoursDraft {
+  return hours.map((d) => ({
+    working: d !== null,
+    start: toTimeInput(d?.start ?? 600),
+    end: toTimeInput(d?.end ?? 1260),
+  }));
+}
+
+/** Back to minutes; null if any working day is invalid. */
+function fromDraft(draft: HoursDraft): WeeklyHours | null {
+  const result: WeeklyHours = [];
+  for (const day of draft) {
+    if (!day.working) {
+      result.push(null);
+      continue;
+    }
+    const start = parseTimeOfDay(day.start);
+    const end = parseTimeOfDay(day.end);
+    if (start === null || end === null || end <= start) return null;
+    result.push({ start, end });
+  }
+  return result;
 }

@@ -60,27 +60,27 @@ async function main() {
   const ownerPin = process.env.SEED_OWNER_PIN || randomPin();
   const staffPin = process.env.SEED_STAFF_PIN || randomPin();
 
-  const CATALOG: Record<string, { name: string; priceRM: number; kind?: 'product'; commissionBps?: number }[]> = {
+  const CATALOG: Record<string, { name: string; priceRM: number; minutes?: number; kind?: 'product'; commissionBps?: number }[]> = {
     Haircuts: [
-      { name: 'Haircut', priceRM: 25 },
-      { name: 'Skin Fade', priceRM: 30 },
-      { name: 'Buzz Cut', priceRM: 15 },
-      { name: 'Kids Haircut (under 12)', priceRM: 18 },
+      { name: 'Haircut', priceRM: 25, minutes: 30 },
+      { name: 'Skin Fade', priceRM: 30, minutes: 45 },
+      { name: 'Buzz Cut', priceRM: 15, minutes: 15 },
+      { name: 'Kids Haircut (under 12)', priceRM: 18, minutes: 20 },
     ],
     'Beard & Shave': [
-      { name: 'Beard Trim', priceRM: 12 },
-      { name: 'Beard Sculpt & Line-up', priceRM: 18 },
-      { name: 'Hot Towel Shave', priceRM: 20 },
+      { name: 'Beard Trim', priceRM: 12, minutes: 15 },
+      { name: 'Beard Sculpt & Line-up', priceRM: 18, minutes: 20 },
+      { name: 'Hot Towel Shave', priceRM: 20, minutes: 30 },
     ],
     Packages: [
-      { name: 'Haircut + Beard Trim', priceRM: 35 },
-      { name: 'Haircut + Hot Towel Shave', priceRM: 42 },
-      { name: 'Full Grooming (Cut, Shave, Wash)', priceRM: 55 },
+      { name: 'Haircut + Beard Trim', priceRM: 35, minutes: 45 },
+      { name: 'Haircut + Hot Towel Shave', priceRM: 42, minutes: 60 },
+      { name: 'Full Grooming (Cut, Shave, Wash)', priceRM: 55, minutes: 75 },
     ],
     Treatments: [
-      { name: 'Hair Wash & Style', priceRM: 10 },
-      { name: 'Hair Colour (Black)', priceRM: 40 },
-      { name: 'Scalp Treatment', priceRM: 30 },
+      { name: 'Hair Wash & Style', priceRM: 10, minutes: 15 },
+      { name: 'Hair Colour (Black)', priceRM: 40, minutes: 45 },
+      { name: 'Scalp Treatment', priceRM: 30, minutes: 30 },
     ],
     Products: [
       { name: 'Matte Clay Pomade', priceRM: 35, kind: 'product', commissionBps: 1000 },
@@ -115,6 +115,7 @@ async function main() {
           name: item.name,
           kind: item.kind ?? 'service',
           priceSen: item.priceRM * 100,
+        durationMinutes: item.minutes ?? 30,
           commissionBps: item.commissionBps ?? null,
           sortOrder: i,
         }))
