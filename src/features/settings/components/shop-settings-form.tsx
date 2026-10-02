@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { formatPercent, parsePercent } from '@/lib/money';
 import { removeDuitnowQr, updateShopSettings, uploadDuitnowQr } from '../actions';
+import { DuitnowQrImage } from '@/features/pos/components/duitnow-qr-image';
 import type { ShopSettingsForEdit } from '../queries';
 
 export function ShopSettingsForm({ settings }: { settings: ShopSettingsForEdit }) {
@@ -162,12 +163,7 @@ function DuitnowQrCard({ hasQr }: { hasQr: boolean }) {
     <Section title="DuitNow QR" description="Shown full-size on the payment screen. Use the shop’s static DuitNow QR from your bank app.">
       <div className="flex flex-wrap items-center gap-4">
         {hasQr ? (
-          // eslint-disable-next-line @next/next/no-img-element -- served from the database behind auth
-          <img
-            src={`/duitnow-qr?v=${version}`}
-            alt="Current DuitNow QR"
-            className="size-40 rounded-xl border bg-white object-contain p-2"
-          />
+          <DuitnowQrImage version={version} className="size-40" emptyText="No QR yet" />
         ) : (
           <div className="flex size-40 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-sm text-muted-foreground">
             <QrCode className="size-8" />

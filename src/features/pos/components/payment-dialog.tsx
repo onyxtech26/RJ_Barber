@@ -11,6 +11,7 @@ import { PAYMENT_METHOD_LABELS } from '@/lib/enums';
 import { formatRM, parseRM } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { cancelPendingOrder, changePaymentMethod, confirmPayment } from '../actions';
+import { DuitnowQrImage } from './duitnow-qr-image';
 import type { OrderReceipt, PendingOrder, TerminalSettings } from '../queries';
 
 /**
@@ -124,8 +125,7 @@ function PaymentBody({
         <div className="grid gap-4">
           <div className="flex flex-col items-center gap-2">
             {settings.hasDuitnowQr ? (
-              // eslint-disable-next-line @next/next/no-img-element -- served from the local data folder, not optimisable
-              <img src="/duitnow-qr" alt="Shop DuitNow QR code" className="size-64 rounded-xl border bg-white object-contain p-2" />
+              <DuitnowQrImage className="size-64" emptyText="Shop DuitNow QR not set up yet. The owner can add it in Settings." />
             ) : (
               <div className="flex size-64 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center text-sm text-muted-foreground">
                 <QrCode className="size-10" />

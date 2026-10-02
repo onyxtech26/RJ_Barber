@@ -166,7 +166,7 @@ changes — read `node_modules/next/dist/docs/` before changing framework-level 
 
 ```
 src/
-  app/            routes: (pos)/ terminal, orders, close, settings · login/ · print/ · duitnow-qr/
+  app/            routes: (pos)/ terminal, orders, close, settings · login/ · print/
   features/       one folder per feature: pos, orders, close, settings, catalog, auth, shell
   server/         db (schema, migrations, scripts), auth (PIN, sessions, lockout), audit, image upload checks
   lib/            shared pure helpers: money, pricing (+ tests), dates, enums, print
