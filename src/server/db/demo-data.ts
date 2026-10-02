@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { toBusinessDate } from '../../lib/business-date';
 import { priceTicket, type DiscountInput } from '../../lib/pricing';
-import { db, libsqlClient } from './client';
+import { db, IS_LOCAL_FILE, libsqlClient } from './client';
 import { bookingItems, bookings, catalogItems, orderItems, orders, receiptCounters, shopSettings, staff } from './schema';
 
 /*
@@ -100,8 +100,11 @@ function sampleQrSvg() {
 }
 
 async function main() {
-  if (!process.env.DATABASE_URL?.includes('rj-pos-demo')) {
-    throw new Error('demo-data only runs against the demo database (DATABASE_URL must point at demo/rj-pos-demo.db).');
+  // Only ever the demo: the bundled demo file, or the hosted demo database during a Vercel build.
+  const isDemoFile = process.env.DATABASE_URL?.includes('rj-pos-demo');
+  const isHostedDemo = process.env.DEMO_DATA === '1' && process.env.VERCEL === '1' && !!process.env.TURSO_DATABASE_URL;
+  if (!isDemoFile && !isHostedDemo) {
+    throw new Error('demo-data only runs against the demo database (demo/rj-pos-demo.db or the hosted demo in a Vercel build).');
   }
 
   const items = new Map((await db.select().from(catalogItems)).map((i) => [i.name, i]));
@@ -236,7 +239,7 @@ async function main() {
   }
 
   // Ship the demo as one self-contained file (no -wal/-shm side files).
-  await libsqlClient.execute('PRAGMA journal_mode = DELETE');
+  if (IS_LOCAL_FILE) await libsqlClient.execute('PRAGMA journal_mode = DELETE');
   console.log(`✓ Demo data: ${SAMPLES.length} sample sales, ${SAMPLE_BOOKINGS.length} bookings, sample QR`);
   libsqlClient.close();
 }

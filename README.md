@@ -115,20 +115,18 @@ Replace the code (keep the `data` folder!), run `npm install` if `package.json` 
 
 ## Online demo (Vercel)
 
-`rj-barber.vercel.app` is a **demo only**, with sample data — the shop's real POS runs on the counter PC.
-On Vercel the app switches to demo mode automatically (no settings needed):
+`rj-barber.vercel.app` is a **demo only**, with sample data; the shop's real POS runs on the counter PC.
 
-- Each deploy builds a demo database (`npm run build:demo-db` → `demo/rj-pos-demo.db`): the catalog,
-  RJ / Barber 1 / Barber 2, yesterday's sales left unclosed, today's sales, one pending sale, a void,
-  a discount and a sample (non-scannable) DuitNow QR.
-- Each Vercel server copies it to `/tmp` on first use, so **the demo resets itself** whenever Vercel starts
-  a fresh server (e.g. after it has been idle). Visitors may need to sign in again after a reset.
-- The sign-in screen shows the demo PINs (defined in `src/lib/demo.ts`), and every screen shows a
-  "DEMO · test data only" badge. Day-close backups are skipped.
-- To refresh the sample dates (e.g. right before showing it), redeploy.
-
-For a demo whose data persists between visits, connect a Turso database instead: Vercel → Storage →
-Turso (Singapore) → connect to the project, and set `SEED_OWNER_PIN` / `SEED_STAFF_PIN`.
+- The demo uses a hosted **Turso** database (connected in Vercel → Storage; it sets `TURSO_DATABASE_URL`
+  and `TURSO_AUTH_TOKEN`). All of Vercel's servers share it, so sign-ins, bookings and sales stay put.
+- **Every deploy resets the demo** (`npm run build:demo-db` in `vercel.json`): migrations, then the catalog,
+  RJ / Barber 1 / Barber 2 with demo PINs, sample sales and bookings dated around the deploy day, and a
+  sample (non-scannable) DuitNow QR. **Redeploy the morning you show it** so "today" has data.
+- The reset refuses to run outside a Vercel build, so it can't touch any other database.
+- The sign-in screen shows the demo PINs (`src/lib/demo.ts`); every screen shows a "DEMO · test data only"
+  badge. Day-close backups are skipped.
+- Without Turso the build falls back to a bundled demo file copied to each server's `/tmp`; that works
+  for a quick look but isn't reliable (each server instance has its own copy).
 
 ---
 

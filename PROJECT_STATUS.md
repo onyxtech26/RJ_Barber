@@ -7,7 +7,7 @@
 ---
 
 ## 📍 Where I left off
-**All 7 phases of the POS redesign are done**, plus a **staff booking book** (Phase 8: calendar per barber, durations, working hours, double-booking guard, Start sale → POS). `rj-barber.vercel.app` is a self-resetting **demo**. Next: push Phase 8 to the demo, show the barber, then the go-live checklist below.
+**All 7 phases of the POS redesign are done**, plus a **staff booking book** (Phase 8: calendar per barber, durations, working hours, double-booking guard, Start sale → POS). `rj-barber.vercel.app` is the **demo**, now on a shared Turso database (reset with fresh sample data on every deploy). Next: show the barber (redeploy that morning for fresh dates), then the go-live checklist below.
 
 ---
 
@@ -61,6 +61,7 @@
 - **Enums** live in `src/lib/enums.ts` (client-safe); `schema.ts` re-exports them.
 - **Production run:** `run.bat` → `db:setup` → `db:backup` → build if `scripts/needs-build.mjs` says source is newer than `.next/BUILD_ID` → `next start -H 127.0.0.1 -p 3000` → Edge `--app` window. Not exposed on the LAN by default (README "Using a tablet" explains how to change it). Session cookie is `secure` only when `x-forwarded-proto` is https.
 - **Printing:** `/print/receipt/[id]` (80mm, `@page size: 80mm auto`) and `/print/day/[date]` (A4, owner only). `src/lib/print.ts` loads them in a hidden iframe and checks for a `data-print-ready` marker before calling `print()`, so error/login pages are never printed.
+- **Demo on Turso (2026-10-02):** the /tmp-per-instance demo proved unreliable once there were more pages (sign-in, bookings and sales landed on instances with different copies). Vercel → Storage → Turso (Singapore) now provides `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`; `scripts/build-demo-db.ts` migrates it and resets it to fresh demo data on every Vercel build (refuses outside `VERCEL=1`). The /tmp path remains only as a fallback when Turso isn't configured.
 - **Two deployments:** shop PC = local SQLite file via `run.bat` (the real POS); Vercel `rj-barber.vercel.app` = **self-resetting demo**: `vercel.json` runs `build:demo-db` (migrate + seed with `DEMO_PINS` + `demo-data.ts` samples → `demo/rj-pos-demo.db`), `outputFileTracingIncludes` bundles it, and `client.ts` copies it to `/tmp` on first use when `VERCEL=1` and no DB URL is set. `IS_DEMO` (`src/lib/demo.ts`) = `VERCEL=1` or `DEMO_MODE=1` → badge, PIN hints on sign-in, no close backups. Functions pinned to `sin1`. Turso (`TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN`) still supported for a persistent demo; the seed refuses a hosted DB without `SEED_*_PIN`. Empty env vars count as unset (`||`). **After any local `VERCEL=1` build, rebuild normally** so `run.bat` doesn't serve demo-baked static pages.
 - **QR image** lives in `shop_settings.duitnow_qr_image` (blob) + `duitnow_qr_type` — no files on disk anywhere now. It's loaded via the `loadDuitnowQr` Server Action (data URL), **not** a route handler: on Vercel, route handlers are a separate function with their own demo DB copy and can't see sessions. Avoid adding route handlers that need DB/session state while the demo uses `/tmp`.
 - **drizzle-kit can't answer its rename prompt in a non-interactive shell:** split "drop column + add column" into two migrations (add first, then drop), as done for 0004/0005.
@@ -78,5 +79,6 @@
 - **2026-10-01** — Phase 6: Day Close + owner Settings (shop/SST/QR, catalog, staff/PINs).
 - **2026-10-01** — Phase 7: receipt + day-report printing, production run.bat, cookie/LAN hardening, README. Redesign plan complete.
 - **2026-10-01** — Vercel demo prep: Turso support, QR stored in DB, build-time migrate/seed, demo badge, sin1 region. Diagnosed the live 500 (`mkdir 'data'` on read-only Vercel disk).
+- **2026-10-02** — Demo moved to a shared Turso database, reset on every deploy; verified live.
 - **2026-10-02** — Phase 8: staff booking book (calendar, durations, working hours, Start sale → POS), tested end to end; two bugs fixed during testing.
 - **2026-10-02** — Self-resetting Vercel demo (no external account): bundled demo DB → /tmp, sample sales, PIN hints. Rehearsed with `VERCEL=1` locally; pushed.

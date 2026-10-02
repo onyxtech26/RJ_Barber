@@ -6,6 +6,12 @@ Format each entry: what was done, why it mattered, and any key decisions.
 ---
 
 ## 2026-10-02
+### Demo moved to a shared Turso database
+- **Problem:** after Phase 8 went live, the self-resetting demo kept sending visitors back to the login screen mid-flow (Start sale, charging a booking). Cause: each Vercel server instance had its own /tmp copy of the demo database, and with more pages and steps, consecutive requests often landed on different instances, where the session, a new booking or a sale didn't exist. Code was fine; the storage model wasn't suitable for multi-step use.
+- **Fix:** the user connected a Turso database (Vercel → Storage, Singapore). `scripts/build-demo-db.ts` now, when `TURSO_DATABASE_URL` is set inside a Vercel build, migrates Turso and resets it to fresh demo data (seed with demo PINs + sample sales/bookings/QR dated around the deploy day). It refuses to run outside `VERCEL=1`. The bundled /tmp file is only a fallback without Turso.
+- **Also fixed:** the seed's `--reset` wipe list predated bookings and would have failed on the booking tables' foreign keys; `bookings`/`booking_items` are now wiped first.
+- **Verified:** local rehearsal of the hosted path (twice in a row: no duplicated data; guard refuses outside a Vercel build; shop PIN file untouched); then on the live site (see below).
+
 ### Phase 8 — Booking management (staff-only)
 - **Scope (user's choices):** staff enter bookings in the POS (customers call/WhatsApp/walk in); no public booking page, no walk-in queue, no reminders for now (phone stored). Keeps everything on the shop PC.
 - **Data (migration 0006):** `bookings` (date, start/end instants, barber, customer, phone, notes, status booked → checked_in → completed / cancelled / no_show, `order_id`, who/when) and `booking_items` (services with duration snapshots); `catalog_items.duration_minutes` (default 30; seed has realistic durations); `staff.working_hours` (weekly JSON, null = 10am–9pm daily). Only plain column adds on existing tables, so no SQLite table rebuilds.
